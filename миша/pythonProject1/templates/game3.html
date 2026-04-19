@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Игра 3 - Побег из лабиринта</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <style>
+        canvas { border: 2px solid #333; background: #1a1a2e; display: block; margin: 20px auto; }
+        #monsterStatus { font-size: 20px; text-align: center; margin: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>👾 Побег из лабиринта</h1>
+        <div id="monsterStatus">Монстр 1/3</div>
+        <canvas id="gameCanvas" width="800" height="500"></canvas>
+        <div class="controls">
+            <button onclick="restartGame()">Перезапустить</button>
+            <a href="/"><button>На главную</button></a>
+        </div>
+    </div>
+    <script src="/static/game3.js"></script>
+</body>
+</html>
+</body>
+</html>
