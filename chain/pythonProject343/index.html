@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>TabletOS - С системными файлами и Recovery</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none;
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: #1e1f2c;
+            overflow: hidden;
+            height: 100vh;
+            width: 100vw;
+        }
+        /* ЭКРАН ЗАГРУЗКИ */
+        .boot-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 30% 20%, #13141f, #090a10);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            transition: opacity 0.8s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+            flex-direction: column;
+            gap: 30px;
+        }
+        .boot-logo {
+            text-align: center;
+            animation: floatLogo 1.8s ease-out;
+        }
+        .boot-logo i {
+            font-size: 80px;
+            background: linear-gradient(135deg, #ffffff, #a0a8ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            filter: drop-shadow(0 0 12px rgba(100,150,255,0.6));
+        }
+        .boot-title {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-top: 16px;
+            color: white;
+            letter-spacing: 2px;
+            background: linear-gradient(120deg, #f0f3ff, #b9c2ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .boot-progress {
+            width: 240px;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .boot-progress-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #6c8eff, #a05eff);
+            border-radius: 10px;
+            transition: width 0.2s linear;
+        }
+        .boot-status {
+            color: #b9c2ff;
+            font-size: 13px;
+            font-weight: 500;
+            background: rgba(0,0,0,0.4);
+            padding: 6px 16px;
+            border-radius: 50px;
+        }
+        @keyframes floatLogo {
+            0% { opacity: 0; transform: scale(0.9) translateY(20px); filter: blur(4px);}
+            100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0);}
+        }
+        /* Основной планшет */
+        .tablet {
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at 20% 30%, #2c2e3f, #181a25);
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            opacity: 0;
+            transition: opacity 0.6s ease;
+        }
+        .tablet.visible {
+            opacity: 1;
+        }
+        /* Экран выключения (shutdown) */
+        .shutdown-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+            color: white;
+            font-size: 24px;
+            transition: opacity 0.5s;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .shutdown-screen.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+        .status-bar {
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(12px);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-weight: 500;
+            font-size: 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            z-index: 100;
+        }
+        .time {
+            font-weight: 600;
+            background: rgba(255,255,255,0.15);
+            padding: 4px 12px;
+            border-radius: 30px;
+        }
+        .battery { display: flex; gap: 8px; align-items: center; }
+        .desktop { flex: 1; padding: 30px 24px; overflow-y: auto; }
+        .icons-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(90px, 110px));
+            gap: 28px 20px;
+            justify-content: start;
+        }
+        .app-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            border-radius: 20px;
+            padding: 12px 6px;
+            background: rgba(255,255,255,0.02);
+            transition: 0.2s;
+        }
+        .app-icon:hover { background: rgba(255,255,255,0.1); transform: scale(1.02); }
+        .icon-circle {
+            width: 70px;
+            height: 70px;
+            background: rgba(255,255,255,0.15);
+            backdrop-filter: blur(20px);
+            border-radius: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            color: white;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2);
+        }
+        .dock {
+            background: rgba(20,22,36,0.85);
+            backdrop-filter: blur(25px);
+            padding: 12px 24px;
+            display: flex;
+            justify-content: center;
+            gap: 32px;
+            border-top: 1px solid rgba(255,255,255,0.15);
+        }
+        .dock-icon {
+            background: rgba(255,255,255,0.1);
+            width: 52px;
+            height: 52px;
+            border-radius: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 26px;
+            color: white;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .dock-icon:hover { background: rgba(255,255,255,0.3); transform: translateY(-4px); }
+        /* Окна */
+        .windows-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+        }
+        .window {
+            position: fixed;
+            top: 12%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85vw;
+            max-width: 800px;
+            height: auto;
+            max-height: 75vh;
+            background: #fef9f0;
+            border-radius: 32px;
+            box-shadow: 0 30px 45px rgba(0,0,0,0.4);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            pointer-events: auto;
+            animation: fadeSlide 0.2s ease-out;
+        }
+        .window-header {
+            background: #2d2f3e;
+            padding: 16px 20px;
+            display: flex;
+            justify-content: space-between;
+            color: white;
+            font-weight: 600;
+        }
+        .close-window {
+            background: rgba(0,0,0,0.3);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 40px;
+            cursor: pointer;
+        }
+        .window-content { padding: 20px; overflow-y: auto; background: white; flex:1; }
+        @keyframes fadeSlide {
+            from { opacity: 0; transform: translateX(-50%) scale(0.96);}
+            to { opacity: 1; transform: translateX(-50%) scale(1);}
+        }
+        /* Файловый менеджер */
+        .file-manager {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .path-bar {
+            background: #eef2ff;
+            padding: 10px 16px;
+            border-radius: 30px;
+            font-family: monospace;
+            font-weight: 500;
+        }
+        .file-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .file-item {
+            background: #f8f9fc;
+            border-radius: 20px;
+            padding: 12px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border: 1px solid #e9ecef;
+        }
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            cursor: pointer;
+        }
+        .file-info i { font-size: 24px; width: 32px; }
+        .delete-file {
+            background: #ffe6e6;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 40px;
+            color: #c0392b;
+            font-weight: 600;
+            cursor: pointer;
+        }
+        .delete-file:hover { background: #ffb3b3; }
+        .recovery-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #0a0c19;
+            z-index: 20000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 30px;
+            backdrop-filter: blur(12px);
+        }
+        .recovery-card {
+            background: #1e1f2c;
+            border-radius: 48px;
+            padding: 40px;
+            text-align: center;
+            color: white;
+            border: 1px solid #ff6b6b;
+            max-width: 400px;
+        }
+        .recovery-card h1 { color: #ff8a8a; margin-bottom: 20px; }
+        .recovery-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            margin-top: 30px;
+        }
+        .rec-btn {
+            background: #2c2e3f;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 60px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .rec-btn.danger { background: #a12222; }
+        .rec-btn:hover { opacity: 0.8; }
+        hr { margin: 16px 0; }
+        button { background: #2d2f3e; border: none; padding: 8px 16px; border-radius: 40px; color: white; cursor: pointer; }
+    </style>
+</head>
+<body>
+<div class="boot-screen" id="bootScreen">
+    <div class="boot-logo"><i class="fas fa-tablet-alt"></i><div class="boot-title">TabletOS</div></div>
+    <div class="boot-progress"><div class="boot-progress-fill" id="bootProgressFill"></div></div>
+    <div class="boot-status" id="bootStatusText">Загрузка ядра...</div>
+</div>
+<div class="shutdown-screen" id="shutdownScreen">
+    <i class="fas fa-power-off" style="font-size: 64px; color: #ddd;"></i>
+    <div>Выключение...</div>
+</div>
+<div class="tablet" id="tabletMain">
+    <div class="status-bar"><div class="time" id="liveTime">--:--</div><div class="battery"><i class="fas fa-signal"></i><i class="fas fa-wifi"></i><i class="fas fa-battery-full"></i></div></div>
+    <div class="desktop" id="desktopArea"><div class="icons-grid" id="iconsGrid"></div></div>
+    <div class="dock"><div class="dock-icon" id="homeBtn"><i class="fas fa-home"></i></div><div class="dock-icon" id="marketDockBtn"><i class="fas fa-store"></i></div><div class="dock-icon" id="fileManagerDockBtn"><i class="fas fa-folder-open"></i></div></div>
+</div>
+<div class="windows-container" id="windowsContainer"></div>
+
+<script>
+    // ---------- ФАЙЛОВАЯ СИСТЕМА ----------
+    let fileSystem = {
+        "/": { type: "dir", children: ["system", "user"] },
+        "/system": { type: "dir", children: ["boot.sys", "kernel.os", "system.cfg", "user.db"] },
+        "/system/boot.sys": { type: "file", content: "BOOT_LOADER_V2", system: true },
+        "/system/kernel.os": { type: "file", content: "KERNEL_TABLET_5.0", system: true },
+        "/system/system.cfg": { type: "file", content: "theme=dark; language=ru", system: true },
+        "/system/user.db": { type: "file", content: "users: admin", system: true },
+        "/user": { type: "dir", children: ["notes.txt"] },
+        "/user/notes.txt": { type: "file", content: "Мои личные заметки", system: false }
+    };
+
+    function getFile(path) { return fileSystem[path]; }
+    function deleteFile(path) {
+        if(!fileSystem[path]) return false;
+        const isSystem = fileSystem[path].system === true;
+        if(isSystem) return "system"; // критично
+        const parentDir = path.substring(0, path.lastIndexOf('/')) || "/";
+        const fileName = path.split('/').pop();
+        if(fileSystem[parentDir] && fileSystem[parentDir].children) {
+            fileSystem[parentDir].children = fileSystem[parentDir].children.filter(f => f !== fileName);
+        }
+        delete fileSystem[path];
+        return "ok";
+    }
+    function listDirectory(dirPath) {
+        const node = fileSystem[dirPath];
+        if(!node || node.type !== "dir") return [];
+        const items = [];
+        for(let child of node.children) {
+            const full = dirPath === "/" ? "/"+child : dirPath+"/"+child;
+            const childNode = fileSystem[full];
+            if(childNode) items.push({ name: child, path: full, isDir: childNode.type === "dir", system: childNode.system || false });
+        }
+        return items;
+    }
+    function recoverSystemFiles() {
+        if(!fileSystem["/system/boot.sys"]) fileSystem["/system/boot.sys"] = { type: "file", content: "BOOT_LOADER_V2", system: true };
+        if(!fileSystem["/system/kernel.os"]) fileSystem["/system/kernel.os"] = { type: "file", content: "KERNEL_TABLET_5.0", system: true };
+        if(!fileSystem["/system/system.cfg"]) fileSystem["/system/system.cfg"] = { type: "file", content: "theme=dark; language=ru", system: true };
+        if(!fileSystem["/system/user.db"]) fileSystem["/system/user.db"] = { type: "file", content: "users: admin", system: true };
+        if(!fileSystem["/system"]) {
+            fileSystem["/system"] = { type: "dir", children: ["boot.sys","kernel.os","system.cfg","user.db"] };
+            fileSystem["/system/boot.sys"] = { type: "file", content: "BOOT_LOADER_V2", system: true };
+            fileSystem["/system/kernel.os"] = { type: "file", content: "KERNEL_TABLET_5.0", system: true };
+            fileSystem["/system/system.cfg"] = { type: "file", content: "theme=dark; language=ru", system: true };
+            fileSystem["/system/user.db"] = { type: "file", content: "users: admin", system: true };
+        }
+        if(!fileSystem["/user"]) fileSystem["/user"] = { type: "dir", children: [] };
+        if(!fileSystem["/user/notes.txt"]) {
+            fileSystem["/user/notes.txt"] = { type: "file", content: "Мои личные заметки", system: false };
+            fileSystem["/user"].children.push("notes.txt");
+        }
+    }
+
+    // Глобальный флаг, чтобы избежать повторного выключения
+    let isShuttingDown = false;
+
+    // Функция выключения с последующей перезагрузкой и проверкой целостности
+    function shutdownAndRebootWithCheck(triggeredBySystemDelete = false, deletedFilePath = "") {
+        if(isShuttingDown) return;
+        isShuttingDown = true;
+        // Закрыть все окна
+        openWindows.forEach(w => { if(w.cleanupFn) w.cleanupFn(); w.windowDiv.remove(); });
+        openWindows = [];
+        // Показать экран выключения
+        const shutdownDiv = document.getElementById('shutdownScreen');
+        shutdownDiv.classList.add('active');
+        // Скрыть планшет (если виден)
+        document.getElementById('tabletMain').classList.remove('visible');
+        // Через 1.5 секунды имитируем перезагрузку
+        setTimeout(() => {
+            // Скрыть выключение
+            shutdownDiv.classList.remove('active');
+            // Запускаем процедуру загрузки с проверкой системных файлов
+            performBootWithIntegrityCheck(triggeredBySystemDelete, deletedFilePath);
+        }, 1500);
+    }
+
+    // Специальная загрузка с проверкой целостности (может привести в recovery)
+    function performBootWithIntegrityCheck(systemDeleted = false, deletedPath = "") {
+        const bootScreen = document.getElementById('bootScreen');
+        const progressFill = document.getElementById('bootProgressFill');
+        const bootStatus = document.getElementById('bootStatusText');
+        bootScreen.style.display = "flex";
+        bootScreen.style.opacity = "1";
+        let curPercent = 0;
+        let stepIndex = 0;
+        const steps = [
+            { p: 20, text: "Инициализация загрузчика..." },
+            { p: 45, text: "Проверка системных файлов..." },
+            { p: 70, text: "Монтирование разделов..." },
+            { p: 90, text: "Анализ целостности..." }
+        ];
+        function updateBoot(percent, text) {
+            progressFill.style.width = percent + '%';
+            bootStatus.innerText = text;
+            curPercent = percent;
+        }
+        function nextStep() {
+            if(stepIndex < steps.length) {
+                const target = steps[stepIndex].p;
+                const stepText = steps[stepIndex].text;
+                const inc = (target - curPercent) / 8;
+                const interval = setInterval(() => {
+                    if(curPercent + inc >= target) {
+                        clearInterval(interval);
+                        curPercent = target;
+                        progressFill.style.width = curPercent + '%';
+                        bootStatus.innerText = stepText;
+                        stepIndex++;
+                        nextStep();
+                    } else {
+                        curPercent += inc;
+                        progressFill.style.width = curPercent + '%';
+                        bootStatus.innerText = stepText;
+                    }
+                }, 40);
+            } else {
+                // Завершаем до 100% и проверяем системные файлы
+                const finalInt = setInterval(() => {
+                    if(curPercent >= 100) {
+                        clearInterval(finalInt);
+                        // Проверка наличия критических файлов
+                        const critical = ["/system/boot.sys", "/system/kernel.os", "/system/system.cfg"];
+                        let missing = [];
+                        for(let crit of critical) {
+                            if(!fileSystem[crit]) missing.push(crit.split('/').pop());
+                        }
+                        if(missing.length > 0) {
+                            bootStatus.innerText = "ОШИБКА: отсутствуют системные файлы!";
+                            setTimeout(() => {
+                                // Вход в Recovery Mode
+                                showRecoveryMode(`Обнаружено отсутствие критических файлов: ${missing.join(", ")}. Система нестабильна.`);
+                                bootScreen.style.opacity = "0";
+                                setTimeout(() => { bootScreen.style.display = "none"; }, 500);
+                            }, 800);
+                        } else {
+                            bootStatus.innerText = "Загрузка завершена!";
+                            setTimeout(() => {
+                                bootScreen.style.opacity = "0";
+                                setTimeout(() => {
+                                    bootScreen.style.display = "none";
+                                    document.getElementById('tabletMain').classList.add('visible');
+                                    isShuttingDown = false;
+                                }, 500);
+                            }, 400);
+                        }
+                    } else {
+                        curPercent = Math.min(100, curPercent + 2);
+                        progressFill.style.width = curPercent + '%';
+                        bootStatus.innerText = "Загрузка окружения...";
+                    }
+                }, 30);
+            }
+        }
+        nextStep();
+    }
+
+    // RECOVERY MODE
+    let recoveryActive = false;
+    function showRecoveryMode(reason) {
+        if(recoveryActive) return;
+        recoveryActive = true;
+        const recoveryDiv = document.createElement('div');
+        recoveryDiv.className = 'recovery-overlay';
+        recoveryDiv.id = 'recoveryUI';
+        recoveryDiv.innerHTML = `
+            <div class="recovery-card">
+                <i class="fas fa-exclamation-triangle" style="font-size: 64px; color: #ff8a8a;"></i>
+                <h1>Режим восстановления</h1>
+                <p>${reason}</p>
+                <p style="font-size: 12px; margin-top: 10px;">Ваша ОС повреждена. Выберите действие:</p>
+                <div class="recovery-buttons">
+                    <button class="rec-btn" id="recReboot">Перезагрузить (проверить снова)</button>
+                    <button class="rec-btn danger" id="recReset">Восстановить системные файлы</button>
+                </div>
+                <hr>
+                <button class="rec-btn" id="recSafeMode">Безопасный режим (только файловый менеджер)</button>
+            </div>
+        `;
+        document.body.appendChild(recoveryDiv);
+        document.getElementById('recReboot').addEventListener('click', () => {
+            recoveryDiv.remove();
+            recoveryActive = false;
+            performBootWithIntegrityCheck(false);
+        });
+        document.getElementById('recReset').addEventListener('click', () => {
+            recoverSystemFiles();
+            alert("Системные файлы восстановлены. Перезагрузка...");
+            recoveryDiv.remove();
+            recoveryActive = false;
+            performBootWithIntegrityCheck(false);
+        });
+        document.getElementById('recSafeMode').addEventListener('click', () => {
+            recoveryDiv.remove();
+            recoveryActive = false;
+            // безопасный режим: открываем файловый менеджер с блокировкой удаления системных
+            openFileManagerSafeMode();
+            // также показываем планшет, но блокируем удаление
+            document.getElementById('tabletMain').classList.add('visible');
+        });
+    }
+
+    // Файловый менеджер (обычный)
+    let currentDir = "/";
+    function renderFileManager(container, safeMode = false) {
+        const items = listDirectory(currentDir);
+        const pathDisplay = currentDir === "/" ? "/" : currentDir;
+        container.innerHTML = `
+            <div class="file-manager">
+                <div class="path-bar"><i class="fas fa-folder-open"></i> ${pathDisplay}</div>
+                <div class="file-list" id="fileListArea"></div>
+                ${currentDir !== "/" ? '<button id="fmGoUp"><i class="fas fa-arrow-up"></i> Наверх</button>' : ''}
+            </div>
+        `;
+        const fileListDiv = container.querySelector('#fileListArea');
+        items.forEach(item => {
+            const itemDiv = document.createElement('div');
+            itemDiv.className = 'file-item';
+            const icon = item.isDir ? '<i class="fas fa-folder" style="color:#f1c40f;"></i>' : '<i class="fas fa-file" style="color:#3498db;"></i>';
+            itemDiv.innerHTML = `
+                <div class="file-info">
+                    ${icon}
+                    <span>${item.name} ${item.system ? '<span style="color:#e67e22; font-size:11px;">[системный]</span>' : ''}</span>
+                </div>
+                ${!item.isDir ? `<button class="delete-file" data-path="${item.path}" data-system="${item.system}"><i class="fas fa-trash-alt"></i> Удалить</button>` : ''}
+            `;
+            const infoDiv = itemDiv.querySelector('.file-info');
+            infoDiv.addEventListener('click', () => {
+                if(item.isDir) {
+                    currentDir = item.path;
+                    renderFileManager(container, safeMode);
+                } else {
+                    const fileNode = getFile(item.path);
+                    alert(`Содержимое ${item.name}:\n${fileNode ? fileNode.content : 'пусто'}`);
+                }
+            });
+            const delBtn = itemDiv.querySelector('.delete-file');
+            if(delBtn) {
+                delBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const path = delBtn.dataset.path;
+                    const isSys = delBtn.dataset.system === 'true';
+                    if(safeMode && isSys) {
+                        alert("В безопасном режиме удаление системных файлов запрещено.");
+                        return;
+                    }
+                    const result = deleteFile(path);
+                    if(result === "system") {
+                        // Системный файл удален -> выключение + перезагрузка с проверкой
+                        if(confirm("Вы удалили системный файл! ОС выключится и перезагрузится для проверки целостности. Продолжить?")) {
+                            shutdownAndRebootWithCheck(true, path);
+                        } else {
+                            // откат? но файл уже удален, всё равно придется перезагрузиться
+                            shutdownAndRebootWithCheck(true, path);
+                        }
+                        return;
+                    } else if(result === "ok") {
+                        renderFileManager(container, safeMode);
+                    } else {
+                        alert("Ошибка удаления");
+                    }
+                });
+            }
+            fileListDiv.appendChild(itemDiv);
+        });
+        const upBtn = container.querySelector('#fmGoUp');
+        if(upBtn) upBtn.addEventListener('click', () => {
+            if(currentDir !== "/") {
+                let parent = currentDir.substring(0, currentDir.lastIndexOf('/'));
+                if(parent === "") parent = "/";
+                currentDir = parent;
+                renderFileManager(container, safeMode);
+            }
+        });
+    }
+    function openFileManager(safe = false) {
+        const container = document.createElement('div');
+        currentDir = "/";
+        renderFileManager(container, safe);
+        createWindow("Файловый менеджер", container, "filemanager", null);
+    }
+    function openFileManagerSafeMode() {
+        const container = document.createElement('div');
+        currentDir = "/";
+        renderFileManager(container, true);
+        createWindow("Файловый менеджер [Безопасный режим]", container, "filemanager_safe", null);
+    }
+
+    // ---------- ПРИЛОЖЕНИЯ И КАТАЛОГ ----------
+    const APP_CATALOG = {
+        calc: { id:'calc', name:'Калькулятор', icon:'fas fa-calculator', description:'Калькулятор', renderer:()=>{ const div=document.createElement('div'); div.innerHTML=`<div class="calc-display" id="calcDisplay">0</div><div class="calc-grid" id="calcButtons"></div>`; const display=div.querySelector('#calcDisplay'); const btnsGrid=div.querySelector('#calcButtons'); const btns=['7','8','9','/','4','5','6','*','1','2','3','-','0','C','=','+']; btnsGrid.innerHTML=btns.map(b=>`<button class="calc-btn" data-val="${b}">${b}</button>`).join(''); let cur='0',op=null,prev=null; const upd=()=>{display.innerText=cur;}; btnsGrid.addEventListener('click',(e)=>{const v=e.target.dataset.val; if(!v)return; if(v>='0'&&v<='9'){ if(cur==='0')cur=v; else cur+=v; upd();}else if(v==='C'){cur='0';op=null;prev=null;upd();}else if(v==='='){if(op&&prev!==null){let res=0; const a=parseFloat(prev),b=parseFloat(cur); if(op==='+')res=a+b; else if(op==='-')res=a-b; else if(op==='*')res=a*b; else if(op==='/')res=b!==0?a/b:'Ошибка'; cur=res.toString(); op=null;prev=null;upd();}}else if(['+','-','*','/'].includes(v)){if(op&&prev!==null){let res=0; const a=parseFloat(prev),b=parseFloat(cur); if(op==='+')res=a+b; else if(op==='-')res=a-b; else if(op==='*')res=a*b; else if(op==='/')res=b!==0?a/b:'Ошибка'; cur=res.toString();} prev=cur; op=v; cur='0';upd();}}); return div; } },
+        notes: { id:'notes', name:'Заметки', icon:'fas fa-note-sticky', description:'Заметки', renderer:()=>{ const d=document.createElement('div'); d.innerHTML=`<textarea id="notesArea" placeholder="Заметка..."></textarea><br><button id="saveNoteBtn">Сохранить</button>`; const ta=d.querySelector('#notesArea'); const saved=localStorage.getItem('tablet_note'); if(saved) ta.value=saved; d.querySelector('#saveNoteBtn').addEventListener('click',()=>{localStorage.setItem('tablet_note',ta.value); alert('Сохранено');}); return d;} },
+        snake: { id:'snake', name:'Змейка', icon:'fas fa-gamepad', description:'Игра', renderer:(onCleanup)=>{ const cont=document.createElement('div'); const canvas=document.createElement('canvas'); canvas.width=400;canvas.height=400; canvas.style.width='100%'; cont.appendChild(canvas); let interval; const ctx=canvas.getContext('2d'); let snake=[{x:10,y:10}]; let dir='RIGHT'; let food={x:15,y:10}; let score=0,run=true; const gs=20,cs=canvas.width/gs; const draw=()=>{ctx.fillStyle='#1e2a2e';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#ffbb77';ctx.fillRect(food.x*cs,food.y*cs,cs-1,cs-1);ctx.fillStyle='#6bcf7f';snake.forEach(s=>ctx.fillRect(s.x*cs,s.y*cs,cs-1,cs-1));ctx.fillStyle='white';ctx.fillText('Score:'+score,10,30);}; const update=()=>{if(!run)return; let nh={...snake[0]}; if(dir==='RIGHT')nh.x++; if(dir==='LEFT')nh.x--; if(dir==='UP')nh.y--; if(dir==='DOWN')nh.y++; if(nh.x<0||nh.x>=gs||nh.y<0||nh.y>=gs||snake.some(s=>s.x===nh.x&&s.y===nh.y)){run=false;clearInterval(interval);alert('Game over: '+score);return;} snake.unshift(nh); if(nh.x===food.x&&nh.y===food.y){score++;food={x:Math.floor(Math.random()*gs),y:Math.floor(Math.random()*gs)};}else snake.pop(); draw();}; const key=(e)=>{const k=e.key; if(k==='ArrowRight'&&dir!=='LEFT')dir='RIGHT'; else if(k==='ArrowLeft'&&dir!=='RIGHT')dir='LEFT'; else if(k==='ArrowUp'&&dir!=='DOWN')dir='UP'; else if(k==='ArrowDown'&&dir!=='UP')dir='DOWN';}; window.addEventListener('keydown',key); interval=setInterval(update,150); draw(); const clean=()=>{clearInterval(interval);window.removeEventListener('keydown',key);}; if(onCleanup)onCleanup(clean); return cont;} },
+        fileExplorer: { id:'fileExplorer', name:'Файловый менеджер', icon:'fas fa-folder-tree', description:'Управление файлами', renderer:()=>{ const cont=document.createElement('div'); renderFileManager(cont, false); return cont; } }
+    };
+    const PLAY_MARKET_APP = { id:'playmarket', name:'Play Market', icon:'fab fa-google-play', open:()=>showMarketWindow() };
+    let installedApps = [ APP_CATALOG.calc, APP_CATALOG.notes, APP_CATALOG.fileExplorer, PLAY_MARKET_APP ];
+    let openWindows = [];
+    const windowsContainer = document.getElementById('windowsContainer');
+    function closeWindow(id){ const idx=openWindows.findIndex(w=>w.windowDiv.id===id); if(idx!==-1){ if(openWindows[idx].cleanupFn) openWindows[idx].cleanupFn(); openWindows[idx].windowDiv.remove(); openWindows.splice(idx,1); } }
+    function createWindow(title,content,appId,cleanup){ const wid='win_'+Date.now()+'_'+Math.random(); const winDiv=document.createElement('div'); winDiv.className='window'; winDiv.id=wid; winDiv.innerHTML=`<div class="window-header"><h3><i class="fas ${getIcon(appId)}"></i> ${title}</h3><button class="close-window"><i class="fas fa-times"></i></button></div><div class="window-content"></div>`; winDiv.querySelector('.close-window').addEventListener('click',()=>closeWindow(wid)); winDiv.querySelector('.window-content').appendChild(content); windowsContainer.appendChild(winDiv); openWindows.push({windowDiv:winDiv, appId, cleanupFn:cleanup}); return winDiv; }
+    function getIcon(id){ if(id==='playmarket')return 'fa-google-play'; if(APP_CATALOG[id])return APP_CATALOG[id].icon; return 'fa-apple'; }
+    function openApp(app){ if(app.id==='playmarket'){ showMarketWindow(); return; } const data=APP_CATALOG[app.id]; if(!data)return; let clean=null; const cont=data.renderer((fn)=>{clean=fn;}); createWindow(data.name,cont,app.id,clean); }
+    function showMarketWindow(){ const mc=document.createElement('div'); mc.className='market-list'; const render=()=>{ mc.innerHTML=''; for(let [id,app] of Object.entries(APP_CATALOG)){ const installed=installedApps.some(i=>i.id===id); const div=document.createElement('div'); div.className='market-item'; div.innerHTML=`<div class="app-info"><div class="app-icon-small"><i class="${app.icon}"></i></div><div><h4>${app.name}</h4><p>${app.description}</p></div></div><button class="${installed?'uninstall-btn':'install-btn'}">${installed?'Удалить':'Установить'}</button>`; const btn=div.querySelector('button'); btn.addEventListener('click',()=>{ if(installed){ const idx=installedApps.findIndex(i=>i.id===id); if(idx!==-1 && installedApps[idx].id!=='playmarket') installedApps.splice(idx,1); renderDesktop(); render(); } else { installedApps.push({...app, id}); renderDesktop(); render(); } }); mc.appendChild(div); } }; render(); createWindow('Play Маркет',mc,'playmarket'); }
+    function renderDesktop(){ const grid=document.getElementById('iconsGrid'); grid.innerHTML=''; installedApps.forEach(app=>{ const div=document.createElement('div'); div.className='app-icon'; div.innerHTML=`<div class="icon-circle"><i class="${app.icon}" style="font-size:36px;"></i></div><span>${app.name}</span>`; div.addEventListener('click',()=>openApp(app)); grid.appendChild(div); }); }
+    function updateTime(){ document.getElementById('liveTime').innerText=new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}); } setInterval(updateTime,1000); updateTime();
+    document.getElementById('homeBtn').addEventListener('click',()=>{ openWindows.forEach(w=>{if(w.cleanupFn)w.cleanupFn(); w.windowDiv.remove();}); openWindows=[]; });
+    document.getElementById('marketDockBtn').addEventListener('click',()=>showMarketWindow());
+    document.getElementById('fileManagerDockBtn').addEventListener('click',()=>openFileManager(false));
+    // Стартовая загрузка (с проверкой целостности)
+    function initialBoot() {
+        const bootScreen = document.getElementById('bootScreen');
+        const progressFill = document.getElementById('bootProgressFill');
+        const bootStatus = document.getElementById('bootStatusText');
+        let curPercent = 0;
+        let step = 0;
+        const stepsArr = [
+            { p: 20, text: "Загрузка ядра..." },
+            { p: 45, text: "Монтирование системных разделов..." },
+            { p: 70, text: "Проверка файловой системы..." },
+            { p: 92, text: "Запуск служб..." }
+        ];
+        function update(percent, text) { progressFill.style.width = percent+'%'; bootStatus.innerText = text; curPercent = percent; }
+        function next() {
+            if(step < stepsArr.length) {
+                const target = stepsArr[step].p, text = stepsArr[step].text;
+                const inc = (target - curPercent)/8;
+                const iv = setInterval(() => {
+                    if(curPercent + inc >= target) {
+                        clearInterval(iv); curPercent = target; update(curPercent, text); step++; next();
+                    } else { curPercent += inc; update(curPercent, text); }
+                }, 45);
+            } else {
+                const fin = setInterval(() => {
+                    if(curPercent >= 100) {
+                        clearInterval(fin);
+                        bootStatus.innerText = "Готово";
+                        setTimeout(() => {
+                            bootScreen.style.opacity = '0';
+                            setTimeout(() => {
+                                bootScreen.style.display = 'none';
+                                document.getElementById('tabletMain').classList.add('visible');
+                            }, 600);
+                        }, 400);
+                    } else { curPercent = Math.min(100, curPercent+1.5); update(curPercent, "Загрузка окружения..."); }
+                }, 30);
+            }
+        }
+        next();
+    }
+    initialBoot();
+    renderDesktop();
+</script>
+</body>
+</html>
