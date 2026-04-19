@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Python Games - Три игры в одной</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 { font-size: 3em; margin-bottom: 40px; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 50px;
+        }
+        .game-card {
+            background: rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            text-decoration: none;
+            color: white;
+            transition: transform 0.3s, background 0.3s;
+            border: 1px solid rgba(255,255,255,0.2);
+            cursor: pointer;
+            display: block;
+        }
+        .game-card:hover {
+            transform: translateY(-10px);
+            background: rgba(255,255,255,0.2);
+        }
+        .game-icon { font-size: 4em; margin-bottom: 20px; }
+
+        /* Стили для игр */
+        .game-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            z-index: 100;
+            overflow-y: auto;
+            display: none;
+        }
+        .game-screen.active {
+            display: block;
+        }
+        .game-container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #333;
+            background: #111;
+            display: block;
+            margin: 20px auto;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            font-size: 16px;
+            cursor: pointer;
+            background: #ff6b6b;
+            border: none;
+            color: white;
+            border-radius: 10px;
+            transition: 0.3s;
+        }
+        button:hover {
+            background: #ff4757;
+            transform: scale(1.05);
+        }
+        .back-btn {
+            background: #4ecdc4;
+        }
+        .back-btn:hover {
+            background: #44b3aa;
+        }
+        #level, #score, #bossHealth, #monsterStatus {
+            font-size: 24px;
+            margin: 10px;
+            color: gold;
+        }
+        .controls {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .info-text {
+            font-size: 14px;
+            color: #ccc;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Главное меню -->
+<div id="mainMenu" class="container">
+    <h1>🎮 Python Games</h1>
+    <div class="games-grid">
+        <div onclick="showGame(1)" class="game-card">
+            <div class="game-icon">🎲</div>
+            <h2>Приключение куба</h2>
+            <p>3 режима: Куб, Самолетик, Стрела. 100 уровней!</p>
+        </div>
+        <div onclick="showGame(2)" class="game-card">
+            <div class="game-icon">✈️</div>
+            <h2>Космический бой</h2>
+            <p>Уничтожай боссов, скорость растет с каждым уровнем</p>
+        </div>
+        <div onclick="showGame(3)" class="game-card">
+            <div class="game-icon">👾</div>
+            <h2>Побег из лабиринта</h2>
+            <p>Убегай от 3 монстров на роботе, уклоняйся от атак</p>
+        </div>
+    </div>
+</div>
+
+<!-- Игра 1 -->
+<div id="game1" class="game-screen">
+    <div class="game-container">
+        <h1>🎲 Приключение куба</h1>
+        <div class="controls">
+            <button onclick="setMode('cube')">Куб 🧊</button>
+            <button onclick="setMode('plane')">Самолетик ✈️</button>
+            <button onclick="setMode('arrow')">Стрела 🏹</button>
+        </div>
+        <div id="level">Уровень: 1 / 100</div>
+        <canvas id="game1Canvas" width="800" height="400"></canvas>
+        <div class="controls">
+            <button onclick="restartGame1()">Перезапустить</button>
+            <button class="back-btn" onclick="hideGame()">На главную</button>
+        </div>
+        <div class="info-text">Управление: Стрелки. Для куба: влево/вправо + пробел прыжок</div>
+    </div>
+</div>
+
+<!-- Игра 2 -->
+<div id="game2" class="game-screen">
+    <div class="game-container">
+        <h1>✈️ Космический бой</h1>
+        <div id="score">Уничтожено боссов: 0</div>
+        <div id="bossHealth">Здоровье босса: 100</div>
+        <canvas id="game2Canvas" width="800" height="500"></canvas>
+        <div class="controls">
+            <button onclick="restartGame2()">Перезапустить</button>
+            <button class="back-btn" onclick="hideGame()">На главную</button>
+        </div>
+        <div class="info-text">Управление: Стрелки - движение, Пробел - стрельба</div>
+    </div>
+</div>
+
+<!-- Игра 3 -->
+<div id="game3" class="game-screen">
+    <div class="game-container">
+        <h1>👾 Побег из лабиринта</h1>
+        <div id="monsterStatus">Монстр 1/3</div>
+        <canvas id="game3Canvas" width="800" height="500"></canvas>
+        <div class="controls">
+            <button onclick="restartGame3()">Перезапустить</button>
+            <button class="back-btn" onclick="hideGame()">На главную</button>
+        </div>
+        <div class="info-text">Управление: Стрелки - движение, Пробел - атака (когда монстр рядом)</div>
+    </div>
+</div>
+
+<script>
+    // ========== НАВИГАЦИЯ ==========
+    function showGame(gameNumber) {
+        document.getElementById('mainMenu').style.display = 'none';
+        document.getElementById('game' + gameNumber).classList.add('active');
+
+        if(gameNumber === 1) startGame1();
+        else if(gameNumber === 2) startGame2();
+        else if(gameNumber === 3) startGame3();
+    }
+
+    function hideGame() {
+        document.getElementById('mainMenu').style.display = 'block';
+        document.getElementById('game1').classList.remove('active');
+        document.getElementById('game2').classList.remove('active');
+        document.getElementById('game3').classList.remove('active');
+    }
+
+    // ========== ИГРА 1 ==========
+    let canvas1, ctx1;
+    let mode = 'cube';
+    let level = 1;
+    let gameRunning1 = true;
+    let player1, obstacles1, keys1;
+    let animationId1;
+
+    function initGame1() {
+        canvas1 = document.getElementById('game1Canvas');
+        ctx1 = canvas1.getContext('2d');
+        keys1 = {};
+
+        document.addEventListener('keydown', (e) => {
+            keys1[e.key] = true;
+            if(e.key === ' ' && mode === 'cube' && player1.y >= 350 && gameRunning1) {
+                player1.vy = player1.jumpPower;
+                e.preventDefault();
+            }
+        });
+        document.addEventListener('keyup', (e) => { keys1[e.key] = false; });
+    }
+
+    function setMode(newMode) {
+        mode = newMode;
+        restartGame1();
+    }
+
+    function restartGame1() {
+        level = 1;
+        gameRunning1 = true;
+        player1 = { x: 100, y: 300, width: 30, height: 30, vy: 0, gravity: 0.8, jumpPower: -12 };
+        obstacles1 = [];
+        generateObstacles1();
+        document.getElementById('level').innerText = `Уровень: ${level} / 100`;
+    }
+
+    function generateObstacles1() {
+        obstacles1 = [];
+        let count = 5 + Math.floor(level / 10);
+        for(let i = 0; i < count; i++) {
+            let obsY = 350;
+            if(mode === 'plane') obsY = 100 + Math.random() * 250;
+            else if(mode === 'arrow') obsY = 100 + Math.random() * 250;
+            obstacles1.push({
+                x: 300 + i * 150 + Math.random() * 50,
+                y: obsY,
+                width: 20,
+                height: 20
+            });
+        }
+    }
+
+    function updateGame1() {
+        if(!gameRunning1) return;
+
+        if(mode === 'cube') {
+            player1.vy += player1.gravity;
+            player1.y += player1.vy;
+            if(player1.y > 350) { player1.y = 350; player1.vy = 0; }
+            if(player1.y < 0) player1.y = 0;
+            if(keys1['ArrowLeft'] && player1.x > 50) player1.x -= 5;
+            if(keys1['ArrowRight'] && player1.x < 200) player1.x += 5;
+        } else if(mode === 'plane') {
+            if(keys1['ArrowUp'] && player1.y > 10) player1.y -= 5;
+            if(keys1['ArrowDown'] && player1.y < 360) player1.y += 5;
+            player1.x = 100;
+        } else if(mode === 'arrow') {
+            if(keys1['ArrowUp'] && player1.y > 10) player1.y -= 8;
+            if(keys1['ArrowDown'] && player1.y < 360) player1.y += 8;
+            player1.x = 100;
+        }
+
+        for(let obs of obstacles1) {
+            if(player1.x < obs.x + obs.width && player1.x + player1.width > obs.x &&
+               player1.y < obs.y + obs.height && player1.y + player1.height > obs.y) {
+                gameRunning1 = false;
+                alert(`Игра окончена! Вы достигли ${level} уровня`);
+                restartGame1();
+                return;
+            }
+        }
+
+        for(let obs of obstacles1) obs.x -= 4;
+        obstacles1 = obstacles1.filter(obs => obs.x + obs.width > 0);
+
+        if(obstacles1.length === 0 && gameRunning1) {
+            level++;
+            if(level > 100) {
+                alert("Поздравляю! Вы прошли все 100 уровней!");
+                restartGame1();
+            } else {
+                document.getElementById('level').innerText = `Уровень: ${level} / 100`;
+                generateObstacles1();
+            }
+        }
+    }
+
+    function drawGame1() {
+        ctx1.clearRect(0, 0, 800, 400);
+
+        if(mode === 'cube') {
+            ctx1.fillStyle = '#44ff44';
+            ctx1.fillRect(player1.x, player1.y, player1.width, player1.height);
+            ctx1.strokeStyle = '#ffffff';
+            ctx1.strokeRect(player1.x, player1.y, player1.width, player1.height);
+        } else if(mode === 'plane') {
+            ctx1.fillStyle = '#44aaff';
+            ctx1.fillRect(player1.x, player1.y, player1.width, player1.height);
+            ctx1.fillStyle = '#88ccff';
+            ctx1.fillRect(player1.x-10, player1.y+10, 10, 10);
+        } else {
+            ctx1.fillStyle = '#ffaa44';
+            ctx1.fillRect(player1.x, player1.y, player1.width, player1.height);
+            ctx1.fillStyle = '#ffcc88';
+            ctx1.fillRect(player1.x-15, player1.y+12, 15, 6);
+        }
+
+        ctx1.fillStyle = '#ff4444';
+        for(let obs of obstacles1) {
+            ctx1.fillRect(obs.x, obs.y, obs.width, obs.height);
+        }
+    }
+
+    function gameLoop1() {
+        updateGame1();
+        drawGame1();
+        animationId1 = requestAnimationFrame(gameLoop1);
+    }
+
+    function startGame1() {
+        if(animationId1) cancelAnimationFrame(animationId1);
+        initGame1();
+        restartGame1();
+        gameLoop1();
+    }
+
+    // ========== ИГРА 2 ==========
+    let canvas2, ctx2;
+    let player2, boss, bullets2, enemyBullets;
+    let score2 = 0;
+    let gameSpeed = 3;
+    let gameRunning2 = true;
+    let keys2 = {};
+    let animationId2;
+    let shootCooldown = 0;
+    let bossShootInterval;
+
+    function initGame2() {
+        canvas2 = document.getElementById('game2Canvas');
+        ctx2 = canvas2.getContext('2d');
+        keys2 = {};
+
+        document.addEventListener('keydown', (e) => { keys2[e.key] = true; if(e.key === ' ') e.preventDefault(); });
+        document.addEventListener('keyup', (e) => { keys2[e.key] = false; });
+    }
+
+    function restartGame2() {
+        if(bossShootInterval) clearInterval(bossShootInterval);
+        score2 = 0;
+        gameSpeed = 3;
+        gameRunning2 = true;
+        player2 = { x: 50, y: 250, width: 30, height: 30 };
+        boss = { x: 700, y: 200, width: 60, height: 60, health: 100, maxHealth: 100 };
+        bullets2 = [];
+        enemyBullets = [];
+        updateUI2();
+
+        bossShootInterval = setInterval(() => {
+            if(gameRunning2 && boss.health > 0) {
+                enemyBullets.push({ x: boss.x, y: boss.y + 25, width: 8, height: 8 });
+            }
+        }, 1500);
+    }
+
+    function updateUI2() {
+        document.getElementById('score').innerText = `Уничтожено боссов: ${score2}`;
+        document.getElementById('bossHealth').innerText = `Здоровье босса: ${Math.max(0, boss.health)}`;
+    }
+
+    function updateGame2() {
+        if(!gameRunning2) return;
+
+        if(keys2['ArrowUp'] && player2.y > 0) player2.y -= 5;
+        if(keys2['ArrowDown'] && player2.y < canvas2.height - player2.height) player2.y += 5;
+        if(keys2['ArrowLeft'] && player2.x > 0) player2.x -= 5;
+        if(keys2['ArrowRight'] && player2.x < canvas2.width/2) player2.x += 5;
+
+        if(keys2[' '] && shootCooldown <= 0) {
+            bullets2.push({ x: player2.x + player2.width, y: player2.y + 15, width: 5, height: 5 });
+            shootCooldown = 10;
+        }
+        if(shootCooldown > 0) shootCooldown--;
+
+        for(let i=0; i<bullets2.length; i++) {
+            bullets2[i].x += 7;
+            if(bullets2[i].x > canvas2.width) bullets2.splice(i,1);
+            else if(bullets2[i].x < boss.x + boss.width && bullets2[i].x + bullets2[i].width > boss.x &&
+                    bullets2[i].y < boss.y + boss.height && bullets2[i].y + bullets2[i].height > boss.y) {
+                boss.health -= 10;
+                bullets2.splice(i,1);
+                updateUI2();
+                if(boss.health <= 0) {
+                    score2++;
+                    gameSpeed += 1.5;
+                    boss.health = 100 + score2 * 20;
+                    boss.maxHealth = boss.health;
+                    updateUI2();
+                    alert(`Босс уничтожен! Скорость увеличена до ${gameSpeed.toFixed(1)}`);
+                }
+            }
+        }
+
+        for(let i=0; i<enemyBullets.length; i++) {
+            enemyBullets[i].x -= 5;
+            if(enemyBullets[i].x < 0) enemyBullets.splice(i,1);
+            else if(enemyBullets[i].x < player2.x + player2.width && enemyBullets[i].x + enemyBullets[i].width > player2.x &&
+                    enemyBullets[i].y < player2.y + player2.height && enemyBullets[i].y + enemyBullets[i].height > player2.y) {
+                gameRunning2 = false;
+                alert(`Игра окончена! Уничтожено боссов: ${score2}`);
+                restartGame2();
+            }
+        }
+    }
+
+    function drawGame2() {
+        ctx2.clearRect(0,0,800,500);
+        ctx2.fillStyle = '#00ff00';
+        ctx2.fillRect(player2.x, player2.y, player2.width, player2.height);
+        ctx2.fillStyle = '#ff0000';
+        ctx2.fillRect(boss.x, boss.y, boss.width, boss.height);
+        ctx2.fillStyle = 'yellow';
+        for(let b of bullets2) ctx2.fillRect(b.x, b.y, b.width, b.height);
+        ctx2.fillStyle = '#ff6666';
+        for(let b of enemyBullets) ctx2.fillRect(b.x, b.y, b.width, b.height);
+
+        ctx2.fillStyle = 'gray';
+        ctx2.fillRect(20, 20, 200, 20);
+        ctx2.fillStyle = 'red';
+        ctx2.fillRect(20, 20, 200 * (boss.health/boss.maxHealth), 20);
+        ctx2.fillStyle = 'white';
+        ctx2.font = '12px Arial';
+        ctx2.fillText(`Скорость: ${gameSpeed.toFixed(1)}`, 20, 60);
+    }
+
+    function gameLoop2() {
+        updateGame2();
+        drawGame2();
+        animationId2 = requestAnimationFrame(gameLoop2);
+    }
+
+    function startGame2() {
+        if(animationId2) cancelAnimationFrame(animationId2);
+        initGame2();
+        restartGame2();
+        gameLoop2();
+    }
+
+    // ========== ИГРА 3 ==========
+    let canvas3, ctx3;
+    let player3, monster;
+    let monsterCount = 1;
+    let gameRunning3 = true;
+    let attackCooldown = 0;
+    let keys3 = {};
+    let animationId3;
+
+    function initGame3() {
+        canvas3 = document.getElementById('game3Canvas');
+        ctx3 = canvas3.getContext('2d');
+        keys3 = {};
+
+        document.addEventListener('keydown', (e) => { keys3[e.key] = true; if(e.key === ' ') e.preventDefault(); });
+        document.addEventListener('keyup', (e) => { keys3[e.key] = false; });
+    }
+
+    function restartGame3() {
+        monsterCount = 1;
+        gameRunning3 = true;
+        player3 = { x: 50, y: 250, width: 30, height: 30 };
+        monster = { x: 700, y: 250, width: 40, height: 40, health: 50, attackCooldown: 0, speed: 2 };
+        attackCooldown = 0;
+        updateUI3();
+    }
+
+    function updateUI3() {
+        document.getElementById('monsterStatus').innerHTML = `Монстр ${monsterCount}/3 | Здоровье: ${monster.health}`;
+    }
+
+    function updateGame3() {
+        if(!gameRunning3) return;
+
+        if(keys3['ArrowUp'] && player3.y > 0) player3.y -= 5;
+        if(keys3['ArrowDown'] && player3.y < canvas3.height - player3.height) player3.y += 5;
+        if(keys3['ArrowLeft'] && player3.x > 0) player3.x -= 5;
+        if(keys3['ArrowRight'] && player3.x < canvas3.width - player3.width) player3.x += 5;
+
+        let dx = player3.x - monster.x;
+        let dy = player3.y - monster.y;
+        let dist = Math.hypot(dx,dy);
+        if(dist > 0) {
+            monster.x += (dx/dist) * monster.speed;
+            monster.y += (dy/dist) * monster.speed;
+        }
+
+        if(keys3[' '] && attackCooldown <= 0 && dist < 100) {
+            monster.health -= 10;
+            attackCooldown = 20;
+            updateUI3();
+
+            if(monster.health <= 0) {
+                monsterCount++;
+                if(monsterCount > 3) {
+                    alert("Поздравляю! Вы уничтожили всех монстров и победили!");
+                    restartGame3();
+                } else {
+                    monster.health = 50 + monsterCount * 20;
+                    monster.speed = 2 + monsterCount * 0.5;
+                    monster.x = 700;
+                    monster.y = 250 + Math.random() * 200;
+                    updateUI3();
+                    alert(`Монстр ${monsterCount-1} уничтожен! Следующий сильнее!`);
+                }
+            }
+        }
+        if(attackCooldown > 0) attackCooldown--;
+
+        if(monster.attackCooldown <= 0 && dist < 50) {
+            gameRunning3 = false;
+            alert(`Вы погибли! Уничтожено монстров: ${monsterCount-1}`);
+            restartGame3();
+            monster.attackCooldown = 30;
+        } else { monster.attackCooldown--; }
+
+        if(player3.x < 0) player3.x = 0;
+        if(player3.x > canvas3.width - player3.width) player3.x = canvas3.width - player3.width;
+        if(player3.y < 0) player3.y = 0;
+        if(player3.y > canvas3.height - player3.height) player3.y = canvas3.height - player3.height;
+    }
+
+    function drawGame3() {
+        ctx3.clearRect(0,0,800,500);
+
+        for(let i=0; i<50; i++) {
+            ctx3.fillStyle = '#2a2a4e';
+            ctx3.fillRect(100 + i*50, 0, 5, 500);
+            ctx3.fillRect(0, 100 + i*40, 800, 5);
+        }
+
+        ctx3.fillStyle = '#00aaff';
+        ctx3.fillRect(player3.x, player3.y, player3.width, player3.height);
+        ctx3.fillStyle = '#00ccff';
+        ctx3.fillRect(player3.x-5, player3.y+10, 10, 10);
+
+        ctx3.fillStyle = '#ff4444';
+        ctx3.fillRect(monster.x, monster.y, monster.width, monster.height);
+        ctx3.fillStyle = '#ff8888';
+        ctx3.fillRect(monster.x+10, monster.y-10, monster.width-20, 10);
+
+        ctx3.fillStyle = 'white';
+        ctx3.font = '14px Arial';
+        ctx3.fillText(`Здоровье монстра: ${monster.health}`, 20, 50);
+        ctx3.fillText(`Скорость монстра: ${monster.speed.toFixed(1)}`, 20, 70);
+    }
+
+    function gameLoop3() {
+        updateGame3();
+        drawGame3();
+        animationId3 = requestAnimationFrame(gameLoop3);
+    }
+
+    function startGame3() {
+        if(animationId3) cancelAnimationFrame(animationId3);
+        initGame3();
+        restartGame3();
+        gameLoop3();
+    }
+
+    // Инициализация
+    window.onload = () => {
+        document.getElementById('mainMenu').style.display = 'block';
+    };
+</script>
+</body>
+</html>
