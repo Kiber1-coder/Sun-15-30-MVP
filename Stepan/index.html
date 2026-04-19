@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Case Battle | Сбалансированные шансы</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f5f7fb;
+            font-family: 'Inter', sans-serif;
+            color: #1e293b;
+            padding-bottom: 40px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px 28px;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 36px;
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 18px 30px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.3px;
+        }
+
+        .logo span {
+            font-size: 0.8rem;
+            color: #5b6e8c;
+            font-weight: 500;
+        }
+
+        .balance-card {
+            background: #f8fafc;
+            border-radius: 32px;
+            padding: 8px 24px;
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+            border: 1px solid #e2e8f0;
+        }
+
+        .balance-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            font-size: 1rem;
+            color: #1e293b;
+        }
+
+        .balance-amount {
+            font-size: 1.8rem;
+            font-weight: 800;
+            font-family: 'Space Grotesk', monospace;
+            color: #0f172a;
+        }
+
+        .btn-action {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            padding: 8px 20px;
+            border-radius: 40px;
+            color: #1e293b;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+            font-size: 0.85rem;
+        }
+
+        .btn-primary {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #1d4ed8;
+        }
+        .btn-warning {
+            background: #f97316;
+            border-color: #f97316;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #ea580c;
+        }
+        .btn-success {
+            background: #10b981;
+            border-color: #10b981;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #059669;
+        }
+        .btn-action:hover {
+            transform: translateY(-1px);
+            filter: brightness(0.97);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 36px 0 20px 0;
+            border-left: 4px solid #2563eb;
+            padding-left: 20px;
+            color: #0f172a;
+        }
+
+        .cases-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 40px;
+        }
+
+        .case-item {
+            background: #ffffff;
+            border-radius: 20px;
+            padding: 22px;
+            border: 1px solid #e2e8f0;
+            transition: 0.2s ease;
+            cursor: pointer;
+        }
+        .case-item:hover {
+            transform: translateY(-4px);
+            border-color: #2563eb;
+            box-shadow: 0 12px 24px -12px rgba(0, 0, 0, 0.1);
+        }
+        .case-name {
+            font-size: 1.3rem;
+            font-weight: 700;
+            letter-spacing: -0.2px;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+        .case-price {
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #f97316;
+            margin: 12px 0 8px;
+        }
+        .skin-preview {
+            font-size: 0.8rem;
+            color: #5b6e8c;
+            margin: 12px 0;
+        }
+        .chance-info {
+            font-size: 0.7rem;
+            color: #8b9abc;
+            margin-top: 8px;
+            border-top: 1px solid #eef2f6;
+            padding-top: 8px;
+        }
+
+        .inventory-wrapper {
+            background: #ffffff;
+            border-radius: 24px;
+            padding: 18px 16px;
+            border: 1px solid #e2e8f0;
+            margin-top: 10px;
+        }
+        .inventory-scroll {
+            overflow-x: auto;
+            overflow-y: hidden;
+            white-space: nowrap;
+            scroll-behavior: smooth;
+            padding-bottom: 12px;
+            cursor: grab;
+        }
+        .inventory-scroll:active {
+            cursor: grabbing;
+        }
+        .inventory-grid-horizontal {
+            display: inline-flex;
+            gap: 20px;
+            padding: 6px 6px;
+        }
+        .skin-card {
+            background: #f8fafc;
+            border-radius: 18px;
+            padding: 14px 18px;
+            min-width: 240px;
+            display: inline-flex;
+            align-items: center;
+            gap: 16px;
+            border: 1px solid #e2e8f0;
+            transition: 0.1s;
+        }
+        .skin-card:hover {
+            background: #ffffff;
+            border-color: #f97316;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        }
+        .skin-info {
+            flex: 1;
+            white-space: normal;
+        }
+        .skin-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            color: #0f172a;
+        }
+        .skin-price {
+            font-size: 0.8rem;
+            color: #f97316;
+            font-weight: 600;
+        }
+        .sell-btn {
+            background: #fee2e2;
+            border: none;
+            padding: 6px 14px;
+            border-radius: 40px;
+            color: #b91c1c;
+            font-weight: 700;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .sell-btn:hover {
+            background: #fecaca;
+        }
+        .empty-inv {
+            padding: 24px;
+            text-align: center;
+            background: #f8fafc;
+            border-radius: 24px;
+            color: #5b6e8c;
+            font-weight: 500;
+            border: 1px solid #e2e8f0;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(4px);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background: #ffffff;
+            border-radius: 28px;
+            padding: 32px;
+            width: 90%;
+            max-width: 440px;
+            border: 1px solid #cbd5e1;
+        }
+        .modal-content h3 {
+            font-size: 1.4rem;
+            margin-bottom: 8px;
+            color: #0f172a;
+        }
+        .modal input {
+            width: 100%;
+            padding: 14px 18px;
+            border-radius: 60px;
+            border: 1px solid #cbd5e1;
+            margin: 18px 0;
+            background: #f8fafc;
+            color: #0f172a;
+            font-size: 1rem;
+            outline: none;
+        }
+        .modal input:focus {
+            border-color: #2563eb;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 14px;
+            justify-content: flex-end;
+        }
+
+        .open-case-animation {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: #ffffff;
+            border-radius: 40px;
+            padding: 32px;
+            text-align: center;
+            z-index: 2000;
+            border: 2px solid #f97316;
+            width: 320px;
+            box-shadow: 0 25px 40px rgba(0,0,0,0.15);
+        }
+        .rarity-common { color: #6b7280; font-size: 0.7rem; margin-top: 6px; }
+        .rarity-rare { color: #3b82f6; font-size: 0.7rem; margin-top: 6px; }
+        .rarity-epic { color: #8b5cf6; font-size: 0.7rem; margin-top: 6px; }
+        .rarity-legendary { color: #f59e0b; font-size: 0.7rem; margin-top: 6px; }
+        .rarity-covert { color: #ef4444; font-size: 0.7rem; margin-top: 6px; }
+
+        footer {
+            text-align: center;
+            margin-top: 56px;
+            color: #5b6e8c;
+            font-size: 0.8rem;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 24px;
+        }
+
+        .inventory-scroll::-webkit-scrollbar {
+            height: 6px;
+        }
+        .inventory-scroll::-webkit-scrollbar-track {
+            background: #e2e8f0;
+            border-radius: 10px;
+        }
+        .inventory-scroll::-webkit-scrollbar-thumb {
+            background: #f97316;
+            border-radius: 10px;
+        }
+
+        @media (max-width: 700px) {
+            .container { padding: 16px; }
+            .balance-amount { font-size: 1.3rem; }
+            .skin-card { min-width: 200px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <div class="logo">
+            <h1>CASE BATTLE</h1>
+            <span>Кейсы | Скины | Сбалансированные шансы</span>
+        </div>
+        <div class="balance-card">
+            <div class="balance-item">Баланс:</div>
+            <div class="balance-amount" id="balanceAmount">0</div>
+            <button class="btn-action btn-primary" id="depositBtn">Пополнить</button>
+            <button class="btn-action btn-warning" id="withdrawBtn">Вывод</button>
+        </div>
+    </div>
+
+    <div class="section-title">ДОСТУПНЫЕ КЕЙСЫ</div>
+    <div class="cases-grid" id="casesContainer"></div>
+
+    <div class="section-title">ИНВЕНТАРЬ СКИНОВ</div>
+    <div class="inventory-wrapper">
+        <div class="inventory-scroll" id="inventoryScroll">
+            <div class="inventory-grid-horizontal" id="inventoryContainer"></div>
+        </div>
+    </div>
+    <footer>Шансы на ценные предметы увеличены. Удачных открытий!</footer>
+</div>
+
+<!-- модалки -->
+<div id="depositModal" class="modal">
+    <div class="modal-content">
+        <h3>Пополнение баланса</h3>
+        <input type="number" id="depositAmount" placeholder="Сумма в рублях" min="1">
+        <div class="modal-buttons">
+            <button class="btn-action" id="closeDepositModal">Отмена</button>
+            <button class="btn-action btn-success" id="confirmDeposit">Пополнить</button>
+        </div>
+    </div>
+</div>
+<div id="withdrawModal" class="modal">
+    <div class="modal-content">
+        <h3>Вывод средств</h3>
+        <input type="number" id="withdrawAmount" placeholder="Сумма вывода">
+        <input type="text" id="withdrawWallet" placeholder="Номер карты / USDT / QIWI">
+        <div class="modal-buttons">
+            <button class="btn-action" id="closeWithdrawModal">Отмена</button>
+            <button class="btn-action btn-warning" id="confirmWithdraw">Вывести</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Кейсы с увеличенными шансами на ценные предметы
+    // Новые веса: common 45%, rare 30%, epic 15%, legendary 7%, covert 3%
+    const casesList = [
+        {
+            id: 0, name: "Стальной удар", price: 150,
+            skinPool: [
+                { name: "USP-S | Охотник", price: 45, rarity: "common" },
+                { name: "Glock-18 | Водопад", price: 38, rarity: "common" },
+                { name: "MP9 | Зелёный", price: 52, rarity: "common" },
+                { name: "M4A1-S | Лазурный", price: 180, rarity: "rare" },
+                { name: "AK-47 | Абсолют", price: 340, rarity: "epic" },
+                { name: "AWP | Дракон", price: 2450, rarity: "covert" }
+            ]
+        },
+        {
+            id: 1, name: "Ночной кошмар", price: 300,
+            skinPool: [
+                { name: "MP7 | Тень", price: 68, rarity: "common" },
+                { name: "SSG 08 | Ледяной", price: 55, rarity: "common" },
+                { name: "FAMAS | Полумрак", price: 72, rarity: "common" },
+                { name: "MP9 | Призрак", price: 210, rarity: "rare" },
+                { name: "Desert Eagle | Кобра", price: 890, rarity: "epic" },
+                { name: "Knife | Скелет", price: 3400, rarity: "covert" }
+            ]
+        },
+        {
+            id: 2, name: "Киберпанк 2077", price: 500,
+            skinPool: [
+                { name: "Five-SeveN | Искра", price: 85, rarity: "common" },
+                { name: "P250 | Нейрон", price: 62, rarity: "common" },
+                { name: "MAG-7 | Сигнал", price: 78, rarity: "common" },
+                { name: "AUG | Синтвейв", price: 450, rarity: "rare" },
+                { name: "M4A4 | Нейросеть", price: 1870, rarity: "legendary" },
+                { name: "Karambit | Кибер", price: 6700, rarity: "covert" }
+            ]
+        },
+        {
+            id: 3, name: "Пиратская бухта", price: 220,
+            skinPool: [
+                { name: "MP7 | Череп", price: 58, rarity: "common" },
+                { name: "Nova | Шхуна", price: 42, rarity: "common" },
+                { name: "SSG 08 | Абордаж", price: 120, rarity: "rare" },
+                { name: "Deagle | Корсар", price: 550, rarity: "epic" },
+                { name: "AWP | Капитан", price: 1850, rarity: "legendary" }
+            ]
+        },
+        {
+            id: 4, name: "Драконья сталь", price: 620,
+            skinPool: [
+                { name: "Galil | Чешуя", price: 48, rarity: "common" },
+                { name: "Five-SeveN | Пламя", price: 195, rarity: "rare" },
+                { name: "M4A1-S | Изумруд", price: 2100, rarity: "legendary" },
+                { name: "AK-47 | Драконий гнев", price: 4450, rarity: "covert" }
+            ]
+        },
+        {
+            id: 5, name: "Ледяной кошмар", price: 350,
+            skinPool: [
+                { name: "MP9 | Мороз", price: 55, rarity: "common" },
+                { name: "Glock | Стужа", price: 110, rarity: "rare" },
+                { name: "AWP | Фрост", price: 1720, rarity: "legendary" },
+                { name: "Karambit | Ледяной", price: 5400, rarity: "covert" }
+            ]
+        },
+        {
+            id: 6, name: "Восстание машин", price: 440,
+            skinPool: [
+                { name: "SCAR-20 | Ассемблер", price: 48, rarity: "common" },
+                { name: "AUG | ИИ", price: 370, rarity: "rare" },
+                { name: "Deagle | Киберпанк", price: 680, rarity: "epic" },
+                { name: "M4A4 | Терминал", price: 940, rarity: "epic" },
+                { name: "Knife | Синтетик", price: 3900, rarity: "covert" }
+            ]
+        },
+        {
+            id: 7, name: "Золотая лихорадка", price: 800,
+            skinPool: [
+                { name: "Desert Eagle | Султан", price: 1400, rarity: "legendary" },
+                { name: "M4A1-S | Позолота", price: 980, rarity: "epic" },
+                { name: "AWP | Империя", price: 3100, rarity: "covert" },
+                { name: "AK-47 | Золотой тигр", price: 5200, rarity: "covert" }
+            ]
+        }
+    ];
+
+    // Функция выбора скина с увеличенными весами (шанс окупиться выше)
+    // common 45%, rare 30%, epic 15%, legendary 7%, covert 3%
+    function getRandomSkinFromPool(pool) {
+        const itemsWithOdds = pool.map(item => {
+            let odds = 0;
+            switch(item.rarity) {
+                case 'common': odds = 45; break;
+                case 'rare': odds = 30; break;
+                case 'epic': odds = 15; break;
+                case 'legendary': odds = 7; break;
+                case 'covert': odds = 3; break;
+                default: odds = 15;
+            }
+            return { ...item, odds };
+        });
+
+        const totalOdds = itemsWithOdds.reduce((sum, item) => sum + item.odds, 0);
+        let random = Math.random() * totalOdds;
+        let accumulated = 0;
+        for (let item of itemsWithOdds) {
+            accumulated += item.odds;
+            if (random <= accumulated) {
+                return { name: item.name, price: item.price, rarity: item.rarity };
+            }
+        }
+        return { name: pool[0].name, price: pool[0].price, rarity: pool[0].rarity };
+    }
+
+    let userBalance = 2250;
+    let inventory = [
+        { name: "AWP | Дракон", price: 2450, rarity: "covert" },
+        { name: "Desert Eagle | Кобра", price: 890, rarity: "epic" },
+        { name: "Karambit | Кибер", price: 6700, rarity: "covert" }
+    ];
+
+    function saveGameData() {
+        localStorage.setItem('caseBattle_balance', userBalance);
+        localStorage.setItem('caseBattle_inventory', JSON.stringify(inventory));
+    }
+    function loadGameData() {
+        const savedBalance = localStorage.getItem('caseBattle_balance');
+        if (savedBalance !== null) userBalance = Number(savedBalance);
+        const savedInv = localStorage.getItem('caseBattle_inventory');
+        if (savedInv !== null) inventory = JSON.parse(savedInv);
+        if (!inventory.length && savedInv === null) {
+            inventory = [
+                { name: "AWP | Дракон", price: 2450, rarity: "covert" },
+                { name: "Desert Eagle | Кобра", price: 890, rarity: "epic" }
+            ];
+        }
+        updateBalanceUI();
+        renderInventoryHorizontal();
+    }
+
+    function updateBalanceUI() {
+        document.getElementById('balanceAmount').innerText = userBalance.toFixed(2);
+        saveGameData();
+    }
+
+    function renderCases() {
+        const container = document.getElementById('casesContainer');
+        container.innerHTML = '';
+        casesList.forEach(kase => {
+            const div = document.createElement('div');
+            div.className = 'case-item';
+            const maxPrice = Math.max(...kase.skinPool.map(s => s.price));
+            div.innerHTML = `
+                <div class="case-name">${kase.name}</div>
+                <div class="case-price">${kase.price} руб.</div>
+                <div class="skin-preview">Редкие скины до ${maxPrice} руб.</div>
+                <div class="chance-info">Шанс выпадения ценного скина: 25%</div>
+                <button class="btn-action btn-primary open-case-btn" style="width:100%; margin-top:12px;">Открыть кейс</button>
+            `;
+            const btn = div.querySelector('.open-case-btn');
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                attemptOpenCase(kase);
+            });
+            container.appendChild(div);
+        });
+    }
+
+    function attemptOpenCase(kase) {
+        if (userBalance >= kase.price) {
+            userBalance -= kase.price;
+            updateBalanceUI();
+            const dropped = getRandomSkinFromPool(kase.skinPool);
+            inventory.push(dropped);
+            saveGameData();
+            renderInventoryHorizontal();
+            showOpenCaseAnimation(dropped, kase.price);
+        } else {
+            alert("Недостаточно средств! Пополните баланс.");
+        }
+    }
+
+    function getRarityText(rarity) {
+        switch(rarity) {
+            case 'common': return 'Обычный';
+            case 'rare': return 'Редкий';
+            case 'epic': return 'Эпический';
+            case 'legendary': return 'Легендарный';
+            case 'covert': return 'Тайный';
+            default: return '';
+        }
+    }
+
+    function getRarityClass(rarity) {
+        switch(rarity) {
+            case 'common': return 'rarity-common';
+            case 'rare': return 'rarity-rare';
+            case 'epic': return 'rarity-epic';
+            case 'legendary': return 'rarity-legendary';
+            case 'covert': return 'rarity-covert';
+            default: return '';
+        }
+    }
+
+    function showOpenCaseAnimation(skin, casePrice) {
+        const profit = skin.price - casePrice;
+        const profitText = profit >= 0 ? `+${profit} руб.` : `${profit} руб.`;
+        const profitColor = profit >= 0 ? '#10b981' : '#ef4444';
+
+        const animDiv = document.createElement('div');
+        animDiv.className = 'open-case-animation';
+        animDiv.innerHTML = `
+            <div style="font-weight: 800; font-size: 1.4rem; margin-bottom: 12px;">Вам выпало</div>
+            <div style="font-weight: 700; font-size: 1.2rem; margin: 12px 0;">${skin.name}</div>
+            <div class="${getRarityClass(skin.rarity)}">${getRarityText(skin.rarity)}</div>
+            <div style="color: #f97316; font-weight: 700; margin: 8px 0;">Цена: ${skin.price} руб.</div>
+            <div style="color: ${profitColor}; font-weight: 600; margin: 4px 0;">${profitText} к цене кейса</div>
+            <button id="closeAnimBtn" class="btn-action btn-primary" style="margin-top: 20px;">Забрать</button>
+        `;
+        document.body.appendChild(animDiv);
+        const closeBtn = animDiv.querySelector('#closeAnimBtn');
+        closeBtn.addEventListener('click', () => {
+            animDiv.remove();
+            renderInventoryHorizontal();
+        });
+        setTimeout(() => { if(animDiv.parentNode) animDiv.remove(); }, 6000);
+    }
+
+    function renderInventoryHorizontal() {
+        const container = document.getElementById('inventoryContainer');
+        if (!container) return;
+        if (inventory.length === 0) {
+            container.innerHTML = `<div class="empty-inv" style="min-width:280px;">Инвентарь пуст. Откройте кейс, чтобы получить скины.</div>`;
+            return;
+        }
+        container.innerHTML = '';
+        inventory.forEach((skin, idx) => {
+            const card = document.createElement('div');
+            card.className = 'skin-card';
+            card.innerHTML = `
+                <div class="skin-info">
+                    <div class="skin-name">${skin.name}</div>
+                    <div class="skin-price">${skin.price} руб.</div>
+                    <div class="${getRarityClass(skin.rarity)}" style="font-size:0.65rem;">${getRarityText(skin.rarity)}</div>
+                </div>
+                <button class="sell-btn" data-index="${idx}">Продать</button>
+            `;
+            const sellBtn = card.querySelector('.sell-btn');
+            sellBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                sellSkin(idx);
+            });
+            container.appendChild(card);
+        });
+    }
+
+    function sellSkin(index) {
+        if (index >= 0 && index < inventory.length) {
+            const skin = inventory[index];
+            userBalance += skin.price;
+            inventory.splice(index, 1);
+            updateBalanceUI();
+            renderInventoryHorizontal();
+            saveGameData();
+            showToast(`Продано за ${skin.price} руб.`, '#10b981');
+        }
+    }
+
+    function showToast(msg, bgColor) {
+        const toast = document.createElement('div');
+        toast.style.position = 'fixed'; toast.style.bottom = '30px'; toast.style.left = '50%';
+        toast.style.transform = 'translateX(-50%)'; toast.style.background = bgColor;
+        toast.style.color = 'white'; toast.style.padding = '12px 24px'; toast.style.borderRadius = '60px';
+        toast.style.fontWeight = 'bold'; toast.style.zIndex = '9999'; toast.style.fontSize = '0.9rem';
+        toast.innerText = msg;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 2500);
+    }
+
+    // Модалки
+    const depositModal = document.getElementById('depositModal');
+    const withdrawModal = document.getElementById('withdrawModal');
+    document.getElementById('depositBtn').onclick = () => depositModal.style.display = 'flex';
+    document.getElementById('closeDepositModal').onclick = () => depositModal.style.display = 'none';
+    document.getElementById('confirmDeposit').onclick = () => {
+        let amt = parseFloat(document.getElementById('depositAmount').value);
+        if (isNaN(amt) || amt <= 0) { alert('Введите сумму'); return; }
+        userBalance += amt;
+        updateBalanceUI();
+        depositModal.style.display = 'none';
+        document.getElementById('depositAmount').value = '';
+        showToast(`Пополнение на ${amt} руб.`, '#2563eb');
+    };
+    document.getElementById('withdrawBtn').onclick = () => withdrawModal.style.display = 'flex';
+    document.getElementById('closeWithdrawModal').onclick = () => withdrawModal.style.display = 'none';
+    document.getElementById('confirmWithdraw').onclick = () => {
+        let amt = parseFloat(document.getElementById('withdrawAmount').value);
+        let wallet = document.getElementById('withdrawWallet').value.trim();
+        if (isNaN(amt) || amt <= 0) { alert('Укажите сумму'); return; }
+        if (amt > userBalance) { alert(`Недостаточно. Доступно: ${userBalance} руб.`); return; }
+        if (!wallet) { alert('Введите реквизиты'); return; }
+        userBalance -= amt;
+        updateBalanceUI();
+        withdrawModal.style.display = 'none';
+        document.getElementById('withdrawAmount').value = '';
+        document.getElementById('withdrawWallet').value = '';
+        showToast(`Заявка на вывод ${amt} руб. на ${wallet}`, '#f97316');
+    };
+
+    // Магазин случайного скина
+    function createMarketplace() {
+        const marketDiv = document.createElement('div');
+        marketDiv.style.background = '#ffffff';
+        marketDiv.style.borderRadius = '24px';
+        marketDiv.style.padding = '20px 24px';
+        marketDiv.style.margin = '30px 0 20px';
+        marketDiv.style.border = '1px solid #e2e8f0';
+        marketDiv.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:16px;">
+                <div><strong>Рандом-скин из любой коллекции</strong> — пополните коллекцию</div>
+                <button id="randomShopBtn" class="btn-action btn-success">Купить за 380 руб.</button>
+            </div>
+        `;
+        const btn = marketDiv.querySelector('#randomShopBtn');
+        btn.addEventListener('click', () => {
+            if (userBalance >= 380) {
+                userBalance -= 380;
+                updateBalanceUI();
+                const allSkins = casesList.flatMap(c => c.skinPool);
+                const randomItem = getRandomSkinFromPool(allSkins);
+                inventory.push(randomItem);
+                saveGameData();
+                renderInventoryHorizontal();
+                showOpenCaseAnimation(randomItem, 380);
+            } else {
+                alert(`Недостаточно средств. Баланс: ${userBalance} руб.`);
+            }
+        });
+        const container = document.querySelector('.container');
+        const invWrapper = document.querySelector('.inventory-wrapper');
+        container.insertBefore(marketDiv, invWrapper);
+    }
+
+    // Drag to scroll
+    function initDragScroll() {
+        const scrollContainer = document.getElementById('inventoryScroll');
+        if (!scrollContainer) return;
+        let isDown = false, startX, scrollLeft;
+        scrollContainer.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - scrollContainer.offsetLeft;
+            scrollLeft = scrollContainer.scrollLeft;
+            scrollContainer.style.cursor = 'grabbing';
+        });
+        window.addEventListener('mouseup', () => {
+            isDown = false;
+            if(scrollContainer) scrollContainer.style.cursor = 'grab';
+        });
+        window.addEventListener('mousemove', (e) => {
+            if(!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - scrollContainer.offsetLeft;
+            const walk = (x - startX) * 1.5;
+            scrollContainer.scrollLeft = scrollLeft - walk;
+        });
+        scrollContainer.style.cursor = 'grab';
+        scrollContainer.addEventListener('wheel', (e) => {
+            if (e.deltaY !== 0) {
+                e.preventDefault();
+                scrollContainer.scrollLeft += e.deltaY;
+            }
+        });
+    }
+
+    window.onclick = (e) => {
+        if (e.target === depositModal) depositModal.style.display = 'none';
+        if (e.target === withdrawModal) withdrawModal.style.display = 'none';
+    };
+
+    function init() {
+        loadGameData();
+        renderCases();
+        renderInventoryHorizontal();
+        createMarketplace();
+        initDragScroll();
+        setInterval(() => saveGameData(), 8000);
+    }
+    init();
+</script>
+</body>
+</html>
