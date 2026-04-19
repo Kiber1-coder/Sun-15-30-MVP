@@ -1,0 +1,701 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PetitionHub - Сбор подписей</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Навигация */
+        .navbar {
+            background: white;
+            border-radius: 15px;
+            padding: 1rem 2rem;
+            margin-bottom: 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .logo {
+            font-size: 1.8rem;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .nav-links button, .nav-links span {
+            padding: 0.5rem 1rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 1rem;
+            border-radius: 8px;
+            transition: all 0.3s;
+        }
+
+        .nav-links button {
+            background: #667eea;
+            color: white;
+        }
+
+        .nav-links button:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        /* Кнопки */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        .btn-success {
+            background: #48bb78;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #38a169;
+        }
+
+        /* Карточки */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 1.5rem;
+            margin-top: 1rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        }
+
+        .card h3 {
+            color: #667eea;
+            margin-bottom: 0.5rem;
+        }
+
+        .description {
+            color: #666;
+            margin: 0.5rem 0;
+            line-height: 1.5;
+        }
+
+        .meta {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            color: #999;
+            margin: 0.75rem 0;
+        }
+
+        .progress-bar {
+            background: #e2e8f0;
+            border-radius: 10px;
+            height: 8px;
+            overflow: hidden;
+            margin: 0.5rem 0;
+        }
+
+        .progress-fill {
+            background: #667eea;
+            height: 100%;
+            transition: width 0.3s;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            margin: 0.5rem 0;
+        }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+
+        .modal-content input,
+        .modal-content textarea,
+        .modal-content select {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 0.5rem 0 1rem 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .modal-content h2 {
+            margin-bottom: 1rem;
+            color: #667eea;
+        }
+
+        /* Уведомления */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            padding: 1rem 1.5rem;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1100;
+            animation: slideIn 0.3s ease;
+        }
+
+        .toast.success { border-left: 4px solid #48bb78; }
+        .toast.error { border-left: 4px solid #f56565; }
+        .toast.warning { border-left: 4px solid #ed8936; }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+
+        /* Детали петиции */
+        .petition-detail {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .sign-form {
+            background: #f0f9ff;
+            padding: 1.5rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+        }
+
+        .already-signed {
+            background: #c6f6d5;
+            padding: 1rem;
+            border-radius: 10px;
+            margin: 1rem 0;
+            text-align: center;
+        }
+
+        .signature-item {
+            border-left: 3px solid #667eea;
+            padding: 0.75rem;
+            margin: 0.5rem 0;
+            background: #f7fafc;
+            border-radius: 8px;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            background: white;
+            border-radius: 15px;
+            color: #999;
+        }
+
+        hr {
+            margin: 1rem 0;
+            border: none;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        @media (max-width: 768px) {
+            .navbar {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="navbar">
+            <div class="logo">📝 PetitionHub</div>
+            <div class="nav-links" id="navLinks"></div>
+        </div>
+        <div id="app"></div>
+    </div>
+
+    <div id="modal" class="modal">
+        <div class="modal-content" id="modalContent"></div>
+    </div>
+
+    <script>
+        // ============ ДАННЫЕ ============
+        let currentUser = null;
+
+        function getUsers() {
+            let users = localStorage.getItem('users');
+            if (!users) {
+                users = [
+                    { id: 1, username: 'admin', password: this.btoa('admin123'), email: 'admin@test.com', createdAt: new Date().toISOString() }
+                ];
+                localStorage.setItem('users', JSON.stringify(users));
+            }
+            return JSON.parse(localStorage.getItem('users'));
+        }
+
+        function getPetitions() {
+            let petitions = localStorage.getItem('petitions');
+            if (!petitions) {
+                petitions = [
+                    {
+                        id: 1,
+                        title: 'Защитим природу вместе!',
+                        description: 'Требуем прекратить вырубку лесов и ввести штрафы для загрязнителей. Подпишите петицию, чтобы спасти нашу планету для будущих поколений.',
+                        target: 100,
+                        createdBy: 1,
+                        createdAt: new Date().toISOString()
+                    }
+                ];
+                localStorage.setItem('petitions', JSON.stringify(petitions));
+            }
+            return JSON.parse(localStorage.getItem('petitions'));
+        }
+
+        function getSignatures() {
+            let signatures = localStorage.getItem('signatures');
+            if (!signatures) {
+                signatures = [];
+                localStorage.setItem('signatures', JSON.stringify(signatures));
+            }
+            return JSON.parse(localStorage.getItem('signatures'));
+        }
+
+        function saveUsers(users) { localStorage.setItem('users', JSON.stringify(users)); }
+        function savePetitions(petitions) { localStorage.setItem('petitions', JSON.stringify(petitions)); }
+        function saveSignatures(signatures) { localStorage.setItem('signatures', JSON.stringify(signatures)); }
+
+        // ============ ХЕЛПЕРЫ ============
+        function showToast(msg, type = 'success') {
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        function openModal(content) {
+            const modal = document.getElementById('modal');
+            document.getElementById('modalContent').innerHTML = content;
+            modal.style.display = 'flex';
+        }
+
+        function getSignatureCount(petitionId) {
+            return getSignatures().filter(s => s.petitionId === petitionId).length;
+        }
+
+        function hasUserSigned(petitionId, userId) {
+            return getSignatures().some(s => s.petitionId === petitionId && s.userId === userId);
+        }
+
+        function getPetitionSignatures(petitionId) {
+            const signatures = getSignatures();
+            const users = getUsers();
+            return signatures
+                .filter(s => s.petitionId === petitionId)
+                .map(s => {
+                    const user = users.find(u => u.id === s.userId);
+                    return { ...s, username: user?.username || 'Unknown' };
+                })
+                .reverse();
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
+
+        // ============ ОСНОВНЫЕ ФУНКЦИИ ============
+        function renderHome() {
+            const petitions = getPetitions();
+            const users = getUsers();
+
+            if (petitions.length === 0) {
+                document.getElementById('app').innerHTML = `
+                    <div class="empty-state">
+                        <h2>📭 Нет петиций</h2>
+                        <p>Создайте первую петицию прямо сейчас!</p>
+                        ${currentUser ? '<button class="btn btn-primary" onclick="showCreatePetitionModal()">➕ Создать петицию</button>' : '<button class="btn btn-primary" onclick="showLoginModal()">Войдите чтобы создать</button>'}
+                    </div>
+                `;
+                return;
+            }
+
+            let html = '<h1 style="color:white; margin-bottom:1rem">📢 Все петиции</h1><div class="grid">';
+
+            for (let p of petitions) {
+                const creator = users.find(u => u.id === p.createdBy);
+                const count = getSignatureCount(p.id);
+                const percent = (count / p.target) * 100;
+
+                html += `
+                    <div class="card">
+                        <h3>${escapeHtml(p.title)}</h3>
+                        <p class="description">${escapeHtml(p.description.substring(0, 120))}${p.description.length > 120 ? '...' : ''}</p>
+                        <div class="meta">
+                            <span>👤 ${escapeHtml(creator?.username || 'Unknown')}</span>
+                            <span>📅 ${p.createdAt.substring(0, 10)}</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div class="progress-fill" style="width: ${Math.min(percent, 100)}%"></div>
+                        </div>
+                        <div class="stats">
+                            <span>✅ ${count} подписей</span>
+                            <span>🎯 ${p.target}</span>
+                        </div>
+                        <button class="btn btn-primary" onclick="viewPetition(${p.id})">Подробнее</button>
+                    </div>
+                `;
+            }
+
+            html += '</div>';
+            if (currentUser) {
+                html += `<div style="text-align:center; margin-top:2rem;"><button class="btn btn-success" onclick="showCreatePetitionModal()">➕ Новая петиция</button></div>`;
+            }
+
+            document.getElementById('app').innerHTML = html;
+        }
+
+        function viewPetition(id) {
+            const petition = getPetitions().find(p => p.id === id);
+            if (!petition) return;
+
+            const users = getUsers();
+            const creator = users.find(u => u.id === petition.createdBy);
+            const count = getSignatureCount(id);
+            const percent = (count / petition.target) * 100;
+            const signed = currentUser ? hasUserSigned(id, currentUser.id) : false;
+            const signatures = getPetitionSignatures(id);
+
+            let html = `
+                <div class="petition-detail">
+                    <div class="card">
+                        <h2>${escapeHtml(petition.title)}</h2>
+                        <div class="meta">
+                            <span>👤 ${escapeHtml(creator?.username || 'Unknown')}</span>
+                            <span>📅 ${petition.createdAt.substring(0, 10)}</span>
+                        </div>
+                        <div style="background:#f7fafc; padding:1rem; border-radius:10px; margin:1rem 0;">
+                            <p>${escapeHtml(petition.description)}</p>
+                        </div>
+                        <div class="progress-bar" style="height:12px;">
+                            <div class="progress-fill" style="width: ${Math.min(percent, 100)}%"></div>
+                        </div>
+                        <div class="stats">
+                            <span>✅ ${count} из ${petition.target} подписей</span>
+                        </div>
+            `;
+
+            if (currentUser) {
+                if (!signed && currentUser.id !== petition.createdBy) {
+                    html += `
+                        <div class="sign-form">
+                            <h3>✍️ Подписать</h3>
+                            <textarea id="comment" rows="3" placeholder="Ваш комментарий (необязательно)" style="width:100%; padding:0.5rem;"></textarea>
+                            <button class="btn btn-success" onclick="signPetition(${id})">Поставить подпись</button>
+                        </div>
+                    `;
+                } else if (signed) {
+                    html += `<div class="already-signed">✅ Вы уже подписали эту петицию</div>`;
+                } else if (currentUser.id === petition.createdBy) {
+                    html += `<div class="already-signed" style="background:#e2e8f0;">📌 Вы создатель</div>`;
+                }
+            } else {
+                html += `<div class="already-signed" style="background:#e2e8f0;"><a href="#" onclick="showLoginModal(); return false;">Войдите</a> чтобы подписать</div>`;
+            }
+
+            html += `<h3 style="margin-top:1.5rem;">📋 Подписи</h3><div>`;
+
+            if (signatures.length === 0) {
+                html += `<p>Нет подписей. Будьте первым!</p>`;
+            } else {
+                for (let s of signatures.slice(0, 20)) {
+                    html += `
+                        <div class="signature-item">
+                            <strong>${escapeHtml(s.username)}</strong>
+                            <span style="font-size:0.8rem; color:#999;"> ${new Date(s.signedAt).toLocaleString()}</span>
+                            ${s.comment ? `<p style="margin-top:0.3rem;">"${escapeHtml(s.comment)}"</p>` : ''}
+                        </div>
+                    `;
+                }
+            }
+
+            html += `</div><button class="btn btn-primary" style="margin-top:1rem;" onclick="renderHome()">← Назад</button></div></div>`;
+
+            document.getElementById('app').innerHTML = html;
+        }
+
+        window.signPetition = function(petitionId) {
+            if (!currentUser) {
+                showToast('Сначала войдите', 'warning');
+                return;
+            }
+
+            if (hasUserSigned(petitionId, currentUser.id)) {
+                showToast('Вы уже подписали', 'warning');
+                return;
+            }
+
+            const comment = document.getElementById('comment')?.value || '';
+            const signatures = getSignatures();
+
+            signatures.push({
+                id: Date.now(),
+                petitionId: petitionId,
+                userId: currentUser.id,
+                signedAt: new Date().toISOString(),
+                comment: comment
+            });
+
+            saveSignatures(signatures);
+            showToast('Вы подписали петицию! Спасибо!', 'success');
+            viewPetition(petitionId);
+        };
+
+        window.showCreatePetitionModal = function() {
+            if (!currentUser) {
+                showToast('Войдите в систему', 'warning');
+                return;
+            }
+
+            openModal(`
+                <h2>📝 Создать петицию</h2>
+                <input type="text" id="title" placeholder="Название">
+                <textarea id="desc" rows="5" placeholder="Описание"></textarea>
+                <input type="number" id="target" placeholder="Нужно подписей" value="100">
+                <button class="btn btn-primary" onclick="createPetition()">Создать</button>
+                <button class="btn" onclick="closeModal()" style="margin-left:0.5rem;">Отмена</button>
+            `);
+        };
+
+        window.createPetition = function() {
+            const title = document.getElementById('title').value.trim();
+            const desc = document.getElementById('desc').value.trim();
+            const target = parseInt(document.getElementById('target').value);
+
+            if (!title || !desc) {
+                showToast('Заполните все поля', 'error');
+                return;
+            }
+
+            if (target < 1) {
+                showToast('Цель должна быть больше 0', 'error');
+                return;
+            }
+
+            const petitions = getPetitions();
+            petitions.push({
+                id: Date.now(),
+                title: title,
+                description: desc,
+                target: target,
+                createdBy: currentUser.id,
+                createdAt: new Date().toISOString()
+            });
+
+            savePetitions(petitions);
+            closeModal();
+            showToast('Петиция создана!', 'success');
+            renderHome();
+        };
+
+        window.showLoginModal = function() {
+            openModal(`
+                <h2>🔐 Вход</h2>
+                <input type="text" id="loginUsername" placeholder="Имя пользователя">
+                <input type="password" id="loginPassword" placeholder="Пароль">
+                <button class="btn btn-primary" onclick="login()">Войти</button>
+                <hr>
+                <p>Нет аккаунта? <a href="#" onclick="showRegisterModal(); return false;">Зарегистрироваться</a></p>
+            `);
+        };
+
+        window.showRegisterModal = function() {
+            openModal(`
+                <h2>📝 Регистрация</h2>
+                <input type="text" id="regUsername" placeholder="Имя пользователя">
+                <input type="email" id="regEmail" placeholder="Email">
+                <input type="password" id="regPassword" placeholder="Пароль">
+                <input type="password" id="regConfirm" placeholder="Повторите пароль">
+                <button class="btn btn-primary" onclick="register()">Зарегистрироваться</button>
+                <hr>
+                <p>Уже есть аккаунт? <a href="#" onclick="showLoginModal(); return false;">Войти</a></p>
+            `);
+        };
+
+        window.login = function() {
+            const username = document.getElementById('loginUsername').value.trim();
+            const password = document.getElementById('loginPassword').value;
+            const users = getUsers();
+            const user = users.find(u => u.username === username && u.password === btoa(password));
+
+            if (user) {
+                currentUser = { id: user.id, username: user.username, email: user.email };
+                closeModal();
+                updateNav();
+                renderHome();
+                showToast(`Добро пожаловать, ${username}!`, 'success');
+            } else {
+                showToast('Неверные данные', 'error');
+            }
+        };
+
+        window.register = function() {
+            const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const password = document.getElementById('regPassword').value;
+            const confirm = document.getElementById('regConfirm').value;
+
+            if (!username || !password) {
+                showToast('Заполните обязательные поля', 'error');
+                return;
+            }
+
+            if (password !== confirm) {
+                showToast('Пароли не совпадают', 'error');
+                return;
+            }
+
+            if (password.length < 4) {
+                showToast('Пароль минимум 4 символа', 'error');
+                return;
+            }
+
+            const users = getUsers();
+            if (users.find(u => u.username === username)) {
+                showToast('Имя уже занято', 'error');
+                return;
+            }
+
+            users.push({
+                id: Date.now(),
+                username: username,
+                password: btoa(password),
+                email: email,
+                createdAt: new Date().toISOString()
+            });
+
+            saveUsers(users);
+            closeModal();
+            showToast('Регистрация успешна! Теперь войдите', 'success');
+            showLoginModal();
+        };
+
+        window.logout = function() {
+            currentUser = null;
+            updateNav();
+            renderHome();
+            showToast('Вы вышли', 'info');
+        };
+
+        function updateNav() {
+            const nav = document.getElementById('navLinks');
+            if (currentUser) {
+                nav.innerHTML = `
+                    <span style="background:#e2e8f0;">👋 ${escapeHtml(currentUser.username)}</span>
+                    <button onclick="showCreatePetitionModal()">➕ Создать</button>
+                    <button onclick="logout()">🚪 Выйти</button>
+                `;
+            } else {
+                nav.innerHTML = `
+                    <button onclick="showLoginModal()">🔐 Вход</button>
+                    <button onclick="showRegisterModal()">📝 Регистрация</button>
+                `;
+            }
+        }
+
+        // Закрытие модалки по клику вне
+        window.onclick = function(e) {
+            const modal = document.getElementById('modal');
+            if (e.target === modal) closeModal();
+        };
+
+        // Запуск
+        updateNav();
+        renderHome();
+    </script>
+</body>
+</html>
