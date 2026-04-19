@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RetroOS 98</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; }
+        body { font-family: 'Segoe UI', 'MS Sans Serif', Arial, sans-serif; font-size: 12px; overflow: hidden; height: 100vh; width: 100vw; }
+
+        /* === DESKTOP === */
+        #desktop {
+            width: 100%; height: calc(100% - 36px); background: #008080;
+            background-image: radial-gradient(circle at 20% 50%, rgba(0,100,100,0.3) 0%, transparent 50%),
+                              radial-gradient(circle at 80% 20%, rgba(0,120,120,0.2) 0%, transparent 40%);
+            position: relative; padding: 10px; display: flex; flex-wrap: wrap; align-content: flex-start; gap: 10px;
+        }
+
+        .desktop-icon {
+            display: flex; flex-direction: column; align-items: center; width: 75px; padding: 6px;
+            cursor: pointer; border: 1px solid transparent; text-align: center;
+        }
+        .desktop-icon:hover { background: rgba(0, 0, 128, 0.15); border: 1px dotted rgba(255,255,255,0.4); }
+        .desktop-icon.selected { background: rgba(0, 0, 128, 0.35); border: 1px dotted #fff; }
+        .desktop-icon .icon-img { width: 32px; height: 32px; margin-bottom: 4px; image-rendering: pixelated; }
+        .desktop-icon span { color: #fff; font-size: 11px; text-shadow: 1px 1px 1px #000; word-wrap: break-word; line-height: 1.2; }
+
+        /* === WINDOWS === */
+        .window {
+            position: absolute; background: #c0c0c0;
+            border-top: 2px solid #fff; border-left: 2px solid #fff;
+            border-right: 2px solid #404040; border-bottom: 2px solid #404040;
+            box-shadow: inset 1px 1px 0 #dfdfdf, inset -1px -1px 0 #808080, 2px 2px 8px rgba(0,0,0,0.4);
+            min-width: 250px; min-height: 150px; display: none;
+        }
+        .window.active { display: block; z-index: 100; }
+        .window.focused { z-index: 200; }
+
+        .title-bar {
+            background: linear-gradient(90deg, #000080, #1084d0); color: #fff;
+            padding: 2px 4px; display: flex; align-items: center; justify-content: space-between;
+            cursor: move; height: 22px; font-weight: bold; font-size: 12px;
+        }
+        .title-bar-text { display: flex; align-items: center; gap: 4px; }
+        .title-bar-controls { display: flex; gap: 2px; }
+        .title-bar-controls button {
+            width: 16px; height: 14px; background: #c0c0c0;
+            border-top: 1px solid #fff; border-left: 1px solid #fff;
+            border-right: 1px solid #404040; border-bottom: 1px solid #404040;
+            font-size: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0;
+        }
+        .title-bar-controls button:active {
+            border-top: 1px solid #404040; border-left: 1px solid #404040;
+            border-right: 1px solid #fff; border-bottom: 1px solid #fff;
+        }
+
+        .window-body { padding: 8px; overflow: auto; max-height: calc(100% - 50px); }
+        .menu-bar { background: #c0c0c0; border-bottom: 1px solid #808080; display: flex; padding: 1px 0; }
+        .menu-bar-item { padding: 2px 8px; cursor: pointer; font-size: 12px; }
+        .menu-bar-item:hover { background: #000080; color: #fff; }
+
+        .btn-retro {
+            background: #c0c0c0; border-top: 2px solid #fff; border-left: 2px solid #fff;
+            border-right: 2px solid #404040; border-bottom: 2px solid #404040;
+            padding: 4px 12px; font-size: 12px; cursor: pointer; margin: 2px;
+        }
+        .btn-retro:active {
+            border-top: 2px solid #404040; border-left: 2px solid #404040;
+            border-right: 2px solid #fff; border-bottom: 2px solid #fff;
+        }
+
+        .status-bar {
+            background: #c0c0c0; border-top: 1px solid #808080; padding: 2px 4px; display: flex; gap: 2px; font-size: 11px;
+        }
+        .status-bar-field {
+            border-top: 1px solid #808080; border-left: 1px solid #808080;
+            border-right: 1px solid #fff; border-bottom: 1px solid #fff; padding: 1px 6px; flex: 1;
+        }
+
+        .resize-handle {
+            position: absolute; bottom: 0; right: 0; width: 16px; height: 16px; cursor: nwse-resize;
+            background: linear-gradient(135deg, transparent 50%, #808080 50%, #808080 55%, transparent 55%, transparent 65%, #808080 65%, #808080 70%, transparent 70%, transparent 80%, #808080 80%, #808080 85%, transparent 85%);
+        }
+
+        /* Scrollbar retro */
+        ::-webkit-scrollbar { width: 16px; height: 16px; }
+        ::-webkit-scrollbar-track { background: #c0c0c0; border: 1px solid #808080; }
+        ::-webkit-scrollbar-thumb { background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; }
+        ::-webkit-scrollbar-button { background: #c0c0c0; border: 2px solid #fff; border-right-color: #404040; border-bottom-color: #404040; width: 16px; height: 16px; }
+
+        /* === TASKBAR === */
+        #taskbar {
+            position: fixed; bottom: 0; left: 0; right: 0; height: 36px; background: #c0c0c0;
+            border-top: 2px solid #fff; display: flex; align-items: center; z-index: 9999; padding: 2px 4px;
+        }
+        #start-btn {
+            background: #c0c0c0; border-top: 2px solid #fff; border-left: 2px solid #fff;
+            border-right: 2px solid #404040; border-bottom: 2px solid #404040;
+            padding: 2px 8px; font-weight: bold; font-size: 12px; cursor: pointer;
+            display: flex; align-items: center; gap: 4px; height: 26px;
+        }
+        #start-btn:active, #start-btn.active {
+            border-top: 2px solid #404040; border-left: 2px solid #404040;
+            border-right: 2px solid #fff; border-bottom: 2px solid #fff;
+        }
+        .taskbar-divider { width: 2px; height: 24px; border-left: 1px solid #808080; border-right: 1px solid #fff; margin: 0 4px; }
+        #taskbar-items { display: flex; gap: 3px; flex: 1; overflow: hidden; }
+        .taskbar-item {
+            background: #c0c0c0; border-top: 2px solid #fff; border-left: 2px solid #fff;
+            border-right: 2px solid #404040; border-bottom: 2px solid #404040;
+            padding: 2px 10px; font-size: 11px; cursor: pointer; height: 24px; display: flex; align-items: center; gap: 4px;
+            max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .taskbar-item.active {
+            border-top: 2px solid #404040; border-left: 2px solid #404040;
+            border-right: 2px solid #fff; border-bottom: 2px solid #fff; background: #b0b0b0;
+        }
+        #system-tray {
+            display: flex; align-items: center; gap: 6px;
+            border-top: 1px solid #808080; border-left: 1px solid #808080;
+            border-right: 1px solid #fff; border-bottom: 1px solid #fff;
+            padding: 2px 8px; height: 24px; font-size: 11px;
+        }
+
+        /* === START MENU === */
+        #start-menu {
+            position: fixed; bottom: 36px; left: 0; width: 220px; background: #c0c0c0;
+            border-top: 2px solid #fff; border-left: 2px solid #fff;
+            border-right: 2px solid #404040; border-bottom: 2px solid #404040;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.4); display: none; z-index: 10000;
+        }
+        #start-menu.show { display: block; }
+        .start-menu-header {
+            background: linear-gradient(180deg, #000080, #1084d0); color: #fff; font-weight: bold; font-size: 14px;
+            padding: 6px 8px; writing-mode: vertical-rl; text-orientation: mixed;
+            position: absolute; left: 0; top: 0; bottom: 0; width: 22px;
+            display: flex; align-items: center; justify-content: center; letter-spacing: 2px;
+        }
+        .start-menu-items { margin-left: 22px; padding: 4px 0; max-height: 80vh; overflow-y: auto; }
+        .start-menu-item { display: flex; align-items: center; gap: 8px; padding: 6px 12px; cursor: pointer; font-size: 12px; }
+        .start-menu-item:hover { background: #000080; color: #fff; }
+        .start-menu-item img { width: 20px; height: 20px; image-rendering: pixelated; }
+        .start-menu-divider { height: 1px; background: #808080; margin: 2px 24px; border-bottom: 1px solid #fff; }
+
+        /* === CONTEXT MENU === */
+        #context-menu {
+            position: fixed; background: #c0c0c0;
+            border-top: 2px solid #fff; border-left: 2px solid #fff;
+            border-right: 2px solid #404040; border-bottom: 2px solid #404040;
+            box-shadow: 2px 2px 8px rgba(0,0,0,0.4); display: none; z-index: 10001; min-width: 160px; padding: 2px 0;
+        }
+        .ctx-item { padding: 4px 20px; font-size: 12px; cursor: pointer; }
+        .ctx-item:hover { background: #000080; color: #fff; }
+        .ctx-divider { height: 1px; background: #808080; margin: 2px 4px; border-bottom: 1px solid #fff; }
+
+        /* === BOOT & BSOD === */
+        #boot-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; z-index: 99999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; color: #c0c0c0;
+            font-family: 'Courier New', monospace; transition: opacity 0.5s;
+        }
+        #boot-screen.hidden { opacity: 0; pointer-events: none; }
+        .boot-text { font-size: 14px; line-height: 1.6; text-align: left; width: 500px; }
+        .boot-progress { width: 300px; height: 20px; border: 2px solid #808080; margin-top: 20px; overflow: hidden; }
+        .boot-progress-bar { height: 100%; background: #000080; width: 0%; transition: width 0.3s; }
+
+        #bsod {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000080; z-index: 999999;
+            display: none; flex-direction: column; align-items: center; justify-content: center; color: #fff;
+            font-family: 'Courier New', monospace; padding: 40px; text-align: center;
+        }
+        #bsod h1 { background: #aaa; color: #000080; padding: 2px 10px; margin-bottom: 20px; }
+
+        /* === APP SPECIFIC === */
+        .cmd-body { background: #000; color: #c0c0c0; font-family: 'Courier New', monospace; font-size: 14px; height: 100%; padding: 4px; overflow-y: auto; }
+        .cmd-line { margin-bottom: 2px; }
+        .cmd-input-row { display: flex; background: #000; padding: 2px 4px; }
+        .cmd-input { flex: 1; background: transparent; border: none; color: #c0c0c0; font-family: 'Courier New', monospace; font-size: 14px; outline: none; }
+
+        .mp-display { background: #000; color: #0f0; padding: 10px; text-align: center; font-family: monospace; margin-bottom: 8px; border: 2px inset #808080; }
+        .mp-progress { height: 6px; background: #808080; margin-bottom: 8px; border: 1px inset #404040; }
+        .mp-bar { height: 100%; background: #0f0; width: 0%; transition: width 0.1s linear; }
+        .mp-playlist { background: #fff; border: 2px inset #808080; height: 100px; overflow-y: auto; padding: 4px; margin-top: 8px; }
+        .mp-track { padding: 2px 4px; cursor: pointer; }
+        .mp-track:hover, .mp-track.active { background: #000080; color: #fff; }
+
+        .ie-content { background: #fff; padding: 20px; font-family: 'Times New Roman', serif; min-height: 100%; }
+        .ie-content h1 { font-size: 24px; margin-bottom: 10px; }
+        .ie-content a { color: #0000FF; cursor: pointer; text-decoration: underline; }
+
+        .tm-list { background: #fff; border: 2px inset #808080; height: 150px; overflow-y: auto; }
+        .tm-row { display: flex; justify-content: space-between; padding: 4px 8px; border-bottom: 1px dotted #ccc; cursor: pointer; }
+        .tm-row:hover, .tm-row.selected { background: #000080; color: #fff; }
+        .tm-row:last-child { border-bottom: none; }
+
+        .snake-canvas { background: #111; border: 2px inset #808080; cursor: crosshair; }
+    </style>
+</head>
+<body>
+
+<!-- BOOT SCREEN -->
+<div id="boot-screen">
+    <div class="boot-text" id="boot-text"></div>
+    <div class="boot-progress"><div class="boot-progress-bar" id="boot-progress"></div></div>
+</div>
+
+<!-- BSOD -->
+<div id="bsod">
+    <h1>Windows</h1>
+    <p>
+        A fatal exception 0E has occurred at 0028:C002F3DB.<br>
+        The current application will be terminated.<br><br>
+        * Press any key to terminate the current application.<br>
+        * Press CTRL+ALT+DEL again to restart your computer.<br><br>
+        Press any key to continue _
+    </p>
+</div>
+
+<!-- DESKTOP -->
+<div id="desktop">
+    <div class="desktop-icon" ondblclick="openWindow('my-computer')"><svg class="icon-img" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="20" fill="#c0c0c0" stroke="#808080" stroke-width="1"/><rect x="4" y="4" width="24" height="14" fill="#008080"/><rect x="10" y="22" width="12" height="3" fill="#c0c0c0" stroke="#808080" stroke-width="1"/><rect x="6" y="25" width="20" height="3" fill="#c0c0c0" stroke="#808080" stroke-width="1"/></svg><span>Мой компьютер</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('explorer')"><svg class="icon-img" viewBox="0 0 32 32"><rect x="2" y="6" width="28" height="20" fill="#FFD700" stroke="#808080" stroke-width="1"/><rect x="2" y="4" width="12" height="4" fill="#FFD700" stroke="#808080" stroke-width="1"/><rect x="4" y="8" width="24" height="16" fill="#FFEC8B" stroke="none"/></svg><span>Проводник</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('notepad')"><svg class="icon-img" viewBox="0 0 32 32"><rect x="4" y="2" width="24" height="28" fill="#fff" stroke="#808080" stroke-width="1"/><line x1="8" y1="8" x2="24" y2="8" stroke="#00f" stroke-width="1"/><line x1="8" y1="12" x2="24" y2="12" stroke="#00f" stroke-width="1"/></svg><span>Блокнот</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('calculator')"><svg class="icon-img" viewBox="0 0 32 32"><rect x="4" y="2" width="24" height="28" fill="#c0c0c0" stroke="#808080" stroke-width="1"/><rect x="6" y="4" width="20" height="6" fill="#90EE90" stroke="#808080" stroke-width="1"/></svg><span>Калькулятор</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('paint')"><svg class="icon-img" viewBox="0 0 32 32"><ellipse cx="16" cy="18" rx="12" ry="10" fill="#DEB887" stroke="#808080" stroke-width="1"/><circle cx="12" cy="14" r="2.5" fill="#f00"/><circle cx="18" cy="12" r="2.5" fill="#00f"/><circle cx="22" cy="16" r="2.5" fill="#0f0"/></svg><span>Paint</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('minesweeper')"><svg class="icon-img" viewBox="0 0 32 32"><circle cx="16" cy="16" r="6" fill="#333"/><line x1="16" y1="6" x2="16" y2="10" stroke="#333" stroke-width="2"/><line x1="16" y1="22" x2="16" y2="26" stroke="#333" stroke-width="2"/><line x1="6" y1="16" x2="10" y2="16" stroke="#333" stroke-width="2"/><line x1="22" y1="16" x2="26" y2="16" stroke="#333" stroke-width="2"/></svg><span>Сапёр</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('cmd')"><svg class="icon-img" viewBox="0 0 32 32"><rect x="2" y="4" width="28" height="24" fill="#000" stroke="#808080" stroke-width="1"/><text x="4" y="16" fill="#0f0" font-family="monospace" font-size="8">C:\></text></svg><span>Командная строка</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('mediaplayer')"><svg class="icon-img" viewBox="0 0 32 32"><rect x="2" y="4" width="28" height="24" rx="3" fill="#c0c0c0" stroke="#808080" stroke-width="1"/><circle cx="10" cy="16" r="6" fill="#fff" stroke="#808080" stroke-width="1"/><polygon points="16,13 20,16 16,19" fill="#808080"/></svg><span>Медиаплеер</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('browser')"><svg class="icon-img" viewBox="0 0 32 32"><circle cx="16" cy="16" r="12" fill="#000080" stroke="#fff" stroke-width="1"/><ellipse cx="16" cy="16" rx="12" ry="4" fill="none" stroke="#fff" stroke-width="1"/><line x1="16" y1="4" x2="16" y2="28" stroke="#fff" stroke-width="1"/></svg><span>Internet Explorer</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('taskmgr')"><svg class="icon-img" viewBox="0 0 32 32"><rect x="2" y="4" width="28" height="24" fill="#c0c0c0" stroke="#808080" stroke-width="1"/><rect x="6" y="8" width="20" height="4" fill="#00f"/><rect x="6" y="14" width="12" height="4" fill="#0f0"/><rect x="6" y="20" width="16" height="4" fill="#f00"/></svg><span>Диспетчер задач</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('snake')"><svg class="icon-img" viewBox="0 0 32 32"><rect x="4" y="4" width="24" height="24" fill="#111" stroke="#808080" stroke-width="1"/><path d="M8 8h8v8h8v8h-8v-8h-8z" fill="#0f0"/><circle cx="12" cy="12" r="2" fill="#f00"/><circle cx="20" cy="20" r="2" fill="#f00"/></svg><span>Змейка</span></div>
+    <div class="desktop-icon" ondblclick="openWindow('about')"><svg class="icon-img" viewBox="0 0 32 32"><circle cx="16" cy="16" r="14" fill="#000080" stroke="#fff" stroke-width="1"/><text x="16" y="22" text-anchor="middle" fill="#fff" font-size="20" font-weight="bold">?</text></svg><span>О системе</span></div>
+</div>
+
+<!-- ===== WINDOWS ===== -->
+<!-- (Окна Мой компьютер, Проводник, Блокнот, Калькулятор, Paint, Сапёр, О системе остаются прежними, код для них сжат для экономии места, но полностью функционален) -->
+
+<div class="window" id="win-my-computer" style="width:500px;height:380px;top:60px;left:100px;"><div class="title-bar" onmousedown="startDrag(event, 'win-my-computer')"><div class="title-bar-text"><svg width="16" height="16" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="20" fill="#c0c0c0" stroke="#808080" stroke-width="1"/><rect x="4" y="4" width="24" height="14" fill="#008080"/><rect x="10" y="22" width="12" height="3" fill="#c0c0c0"/><rect x="6" y="25" width="20" height="3" fill="#c0c0c0"/></svg> Мой компьютер</div><div class="title-bar-controls"><button onclick="minimizeWindow('my-computer')">_</button><button onclick="maximizeWindow('my-computer')">□</button><button onclick="closeWindow('my-computer')">×</button></div></div><div class="window-body" style="background:#fff; display:flex; flex-wrap:wrap; gap:16px; padding:16px; align-content:flex-start;"><div class="drive-item" ondblclick="alert('Диск C: — 2.1 ГБ свободно из 4.0 ГБ')"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="2" y="8" width="28" height="16" fill="#c0c0c0" stroke="#808080" stroke-width="1"/><rect x="4" y="10" width="24" height="12" fill="#fff" stroke="#808080" stroke-width="0.5"/><rect x="6" y="12" width="10" height="8" fill="#000080"/><circle cx="22" cy="16" r="2" fill="#808080"/></svg><div><div style="font-size:11px;font-weight:bold;">Диск C:</div><div style="font-size:10px;color:#808080;">Локальный диск</div></div></div><div class="drive-item" ondblclick="alert('Диск D: — 4.8 ГБ свободно из 8.0 ГБ')"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="2" y="8" width="28" height="16" fill="#c0c0c0" stroke="#808080" stroke-width="1"/><rect x="4" y="10" width="24" height="12" fill="#fff" stroke="#808080" stroke-width="0.5"/><rect x="6" y="12" width="14" height="8" fill="#008000"/><circle cx="24" cy="16" r="2" fill="#808080"/></svg><div><div style="font-size:11px;font-weight:bold;">Диск D:</div><div style="font-size:10px;color:#808080;">Локальный диск</div></div></div><div class="drive-item" ondblclick="alert('CD-ROM привод пуст')"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="2" y="8" width="28" height="16" fill="#c0c0c0" stroke="#808080" stroke-width="1"/><rect x="4" y="10" width="24" height="12" fill="#fff" stroke="#808080" stroke-width="0.5"/><circle cx="16" cy="16" r="4" fill="none" stroke="#808080" stroke-width="1"/><circle cx="16" cy="16" r="1" fill="#808080"/></svg><div><div style="font-size:11px;font-weight:bold;">CD-ROM (E:)</div><div style="font-size:10px;color:#808080;">Компакт-диск</div></div></div></div><div class="status-bar"><div class="status-bar-field">3 объекта</div><div class="status-bar-field" style="flex:0;">Мой компьютер</div></div><div class="resize-handle" onmousedown="startResize(event, 'win-my-computer')"></div></div>
+
+<div class="window" id="win-explorer" style="width:550px;height:400px;top:80px;left:150px;"><div class="title-bar" onmousedown="startDrag(event, 'win-explorer')"><div class="title-bar-text"><svg width="16" height="16" viewBox="0 0 32 32"><rect x="2" y="6" width="28" height="20" fill="#FFD700" stroke="#808080" stroke-width="1"/><rect x="2" y="4" width="12" height="4" fill="#FFD700" stroke="#808080" stroke-width="1"/><rect x="4" y="8" width="24" height="16" fill="#FFEC8B"/></svg> Проводник</div><div class="title-bar-controls"><button onclick="minimizeWindow('explorer')">_</button><button onclick="maximizeWindow('explorer')">□</button><button onclick="closeWindow('explorer')">×</button></div></div><div class="explorer-toolbar"><button>←</button><button>→</button><div class="explorer-address">C:\Мои документы</div></div><div class="explorer-content"><div class="explorer-sidebar" style="width:160px; background:#fff; border-right:1px solid #808080; padding:4px; overflow-y:auto;"><div class="explorer-sidebar-item">📁 Рабочий стол</div><div class="explorer-sidebar-item">📁 Мои документы</div><div class="explorer-sidebar-item">💾 Диск C:</div><div class="explorer-sidebar-item">🌐 Интернет</div></div><div class="explorer-files" style="flex:1; background:#fff; padding:8px; display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; overflow-y:auto;"><div class="file-item" ondblclick="openWindow('notepad')"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="2" width="24" height="28" fill="#fff" stroke="#808080" stroke-width="1"/></svg><span>readme.txt</span></div><div class="file-item" ondblclick="openWindow('paint')"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="2" y="2" width="28" height="28" fill="#fff" stroke="#808080" stroke-width="1"/></svg><span>фото.bmp</span></div><div class="file-item"><svg width="32" height="32" viewBox="0 0 32 32"><rect x="2" y="6" width="28" height="20" fill="#FFD700" stroke="#808080" stroke-width="1"/></svg><span>Игры</span></div></div></div><div class="status-bar"><div class="status-bar-field">3 объекта</div><div class="status-bar-field" style="flex:0;">C:\Мои документы</div></div><div class="resize-handle" onmousedown="startResize(event, 'win-explorer')"></div></div>
+
+<div class="window" id="win-notepad" style="width:450px;height:320px;top:100px;left:200px;"><div class="title-bar" onmousedown="startDrag(event, 'win-notepad')"><div class="title-bar-text">Блокнот</div><div class="title-bar-controls"><button onclick="minimizeWindow('notepad')">_</button><button onclick="maximizeWindow('notepad')">□</button><button onclick="closeWindow('notepad')">×</button></div></div><div class="menu-bar"><div class="menu-bar-item">Файл</div><div class="menu-bar-item">Правка</div><div class="menu-bar-item">Формат</div></div><div class="window-body" style="padding:0;"><textarea class="notepad-area" placeholder="Введите текст..." style="width:100%;min-height:200px;border:none;outline:none;font-family:'Courier New',monospace;font-size:13px;resize:none;padding:4px;background:#fff;">Привет из RetroOS 98!</textarea></div><div class="resize-handle" onmousedown="startResize(event, 'win-notepad')"></div></div>
+
+<div class="window" id="win-calculator" style="width:240px;height:300px;top:120px;left:350px;"><div class="title-bar" onmousedown="startDrag(event, 'win-calculator')"><div class="title-bar-text">Калькулятор</div><div class="title-bar-controls"><button onclick="minimizeWindow('calculator')">_</button><button onclick="closeWindow('calculator')">×</button></div></div><div class="window-body"><div class="calc-display" id="calc-display" style="background:#fff;border:2px inset #808080;text-align:right;padding:6px 8px;font-family:'Courier New',monospace;font-size:18px;margin-bottom:8px;min-height:32px;">0</div><div class="calc-buttons" style="display:grid;grid-template-columns:repeat(4,1fr);gap:4px;"><div class="calc-btn" onclick="calcClear()" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">C</div><div class="calc-btn" onclick="calcBackspace()" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">⌫</div><div class="calc-btn" onclick="calcInput('%')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">%</div><div class="calc-btn" onclick="calcInput('/')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">÷</div><div class="calc-btn" onclick="calcInput('7')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">7</div><div class="calc-btn" onclick="calcInput('8')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">8</div><div class="calc-btn" onclick="calcInput('9')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">9</div><div class="calc-btn" onclick="calcInput('*')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">×</div><div class="calc-btn" onclick="calcInput('4')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">4</div><div class="calc-btn" onclick="calcInput('5')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">5</div><div class="calc-btn" onclick="calcInput('6')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">6</div><div class="calc-btn" onclick="calcInput('-')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">−</div><div class="calc-btn" onclick="calcInput('1')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">1</div><div class="calc-btn" onclick="calcInput('2')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">2</div><div class="calc-btn" onclick="calcInput('3')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">3</div><div class="calc-btn" onclick="calcInput('+')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">+</div><div class="calc-btn" onclick="calcInput('0')" style="grid-column:span 2;background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">0</div><div class="calc-btn" onclick="calcInput('.')" style="background:#c0c0c0;border:2px outset #fff;padding:8px;cursor:pointer;">.</div><div class="calc-btn" onclick="calcEquals()" style="background:#d0d0d0;border:2px outset #fff;padding:8px;cursor:pointer;">=</div></div></div></div>
+
+<div class="window" id="win-paint" style="width:520px;height:420px;top:50px;left:120px;"><div class="title-bar" onmousedown="startDrag(event, 'win-paint')"><div class="title-bar-text">Paint</div><div class="title-bar-controls"><button onclick="minimizeWindow('paint')">_</button><button onclick="maximizeWindow('paint')">□</button><button onclick="closeWindow('paint')">×</button></div></div><div class="window-body" style="padding:0;overflow:hidden;"><canvas id="paint-canvas" width="480" height="300" style="display:block;background:#fff;cursor:crosshair;"></canvas><div class="paint-colors" id="paint-colors" style="display:flex;gap:1px;padding:4px;background:#c0c0c0;flex-wrap:wrap;"></div></div><div class="resize-handle" onmousedown="startResize(event, 'win-paint')"></div></div>
+
+<div class="window" id="win-minesweeper" style="width:280px;height:380px;top:70px;left:250px;"><div class="title-bar" onmousedown="startDrag(event, 'win-minesweeper')"><div class="title-bar-text">Сапёр</div><div class="title-bar-controls"><button onclick="minimizeWindow('minesweeper')">_</button><button onclick="closeWindow('minesweeper')">×</button></div></div><div class="window-body" style="background:#c0c0c0;"><div class="mine-header" style="background:#c0c0c0;border:2px inset #fff;padding:4px 8px;display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><div class="mine-counter" id="mine-count" style="background:#000;color:#f00;font-family:'Courier New',monospace;font-size:20px;font-weight:bold;padding:2px 4px;min-width:45px;text-align:center;">010</div><div class="mine-face" id="mine-face" onclick="initMinesweeper()" style="width:26px;height:26px;background:#c0c0c0;border:2px outset #fff;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;">😊</div><div class="mine-counter" id="mine-timer" style="background:#000;color:#f00;font-family:'Courier New',monospace;font-size:20px;font-weight:bold;padding:2px 4px;min-width:45px;text-align:center;">000</div></div><div class="mine-grid" id="mine-grid" style="display:inline-grid;border:3px outset #fff;"></div></div></div>
+
+<div class="window" id="win-about" style="width:350px;height:280px;top:150px;left:200px;"><div class="title-bar" onmousedown="startDrag(event, 'win-about')"><div class="title-bar-text">О системе</div><div class="title-bar-controls"><button onclick="closeWindow('about')">×</button></div></div><div class="window-body" style="text-align:center;padding:16px;"><div style="font-size:48px;margin:10px 0;">🖥️</div><h2>RetroOS 98</h2><p>Версия 4.10.1998</p><p style="margin-top:12px;">© RetroSoft Corporation, 1998</p><button class="btn-retro" style="margin-top:16px;" onclick="closeWindow('about')">OK</button></div></div>
+
+<!-- ===== НОВЫЕ ПРИЛОЖЕНИЯ ===== -->
+<div class="window" id="win-cmd" style="width:520px;height:320px;top:140px;left:180px;background:#000;"><div class="title-bar" onmousedown="startDrag(event, 'win-cmd')"><div class="title-bar-text">Командная строка</div><div class="title-bar-controls"><button onclick="minimizeWindow('cmd')">_</button><button onclick="closeWindow('cmd')">×</button></div></div><div class="window-body" style="padding:0;height:calc(100% - 22px);display:flex;flex-direction:column;"><div class="cmd-body" id="cmd-output" style="flex:1;overflow-y:auto;"><div class="cmd-line">Microsoft Windows 98 [Version 4.10.1998]</div><div class="cmd-line">(c) Copyright RetroSoft Corp 1981-1998.</div><div class="cmd-line"> </div><div class="cmd-line">C:\></div></div><div class="cmd-input-row"><span style="color:#c0c0c0;font-family:'Courier New',monospace;font-size:14px;">C:\></span><input type="text" class="cmd-input" id="cmd-input" onkeydown="handleCmd(event)" autocomplete="off" spellcheck="false"></div></div><div class="resize-handle" onmousedown="startResize(event, 'win-cmd')"></div></div>
+
+<div class="window" id="win-mediaplayer" style="width:320px;height:260px;top:160px;left:280px;"><div class="title-bar" onmousedown="startDrag(event, 'win-mediaplayer')"><div class="title-bar-text">Медиаплеер</div><div class="title-bar-controls"><button onclick="minimizeWindow('mediaplayer')">_</button><button onclick="closeWindow('mediaplayer')">×</button></div></div><div class="window-body"><div class="mp-display" id="mp-display">00:00 / 03:45</div><div class="mp-progress"><div class="mp-bar" id="mp-bar"></div></div><div style="display:flex;justify-content:center;gap:6px;margin-bottom:8px;"><button class="btn-retro" onclick="mpPlay()">▶</button><button class="btn-retro" onclick="mpPause()">⏸</button><button class="btn-retro" onclick="mpStop()">⏹</button></div><div class="mp-playlist" id="mp-playlist"><div class="mp-track active" onclick="mpLoad(0)">01. RetroWave.mp3</div><div class="mp-track" onclick="mpLoad(1)">02. 8bit_Dreams.mid</div><div class="mp-track" onclick="mpLoad(2)">03. Dialup_Connection.wav</div><div class="mp-track" onclick="mpLoad(3)">04. CRT_Hum.ogg</div></div></div></div>
+
+<div class="window" id="win-browser" style="width:650px;height:450px;top:40px;left:100px;"><div class="title-bar" onmousedown="startDrag(event, 'win-browser')"><div class="title-bar-text">Internet Explorer 4.0</div><div class="title-bar-controls"><button onclick="minimizeWindow('browser')">_</button><button onclick="maximizeWindow('browser')">□</button><button onclick="closeWindow('browser')">×</button></div></div><div class="explorer-toolbar"><button onclick="ieBack()">←</button><button>→</button><button onclick="ieRefresh()">↻</button><div class="explorer-address" id="ie-address" style="flex:1;">http://www.retrosearch.net</div><button onclick="ieNavigate()">Перейти</button></div><div class="window-body" style="padding:0;overflow:auto;"><div class="ie-content" id="ie-content"><h1>🌐 RetroSearch</h1><p style="margin-bottom:15px;">Добро пожаловать в интернет 1998 года!</p><input type="text" placeholder="Поиск в сети..." style="border:2px inset #808080;padding:4px;width:200px;"><button class="btn-retro">Найти</button><hr style="margin:15px 0;border:none;border-top:1px solid #808080;"><div style="display:flex;gap:10px;"><a href="#" onclick="ieLoad('news')">📰 Новости</a><a href="#" onclick="ieLoad('email')">📧 Почта</a><a href="#" onclick="ieLoad('chat')">💬 Чат</a><a href="#" onclick="ieLoad('games')">🎮 Игры</a></div></div></div><div class="resize-handle" onmousedown="startResize(event, 'win-browser')"></div></div>
+
+<div class="window" id="win-taskmgr" style="width:380px;height:320px;top:100px;left:200px;"><div class="title-bar" onmousedown="startDrag(event, 'win-taskmgr')"><div class="title-bar-text">Диспетчер задач Windows</div><div class="title-bar-controls"><button onclick="minimizeWindow('taskmgr')">_</button><button onclick="closeWindow('taskmgr')">×</button></div></div><div class="window-body"><div style="display:flex;gap:10px;margin-bottom:10px;"><div style="flex:1;text-align:center;background:#c0c0c0;border:1px inset #808080;padding:6px;"><div>CPU</div><div id="tm-cpu-bar" style="height:20px;background:#000;margin-top:4px;border:1px inset #404040;"><div id="tm-cpu-fill" style="height:100%;background:#00f;width:15%;"></div></div></div><div style="flex:1;text-align:center;background:#c0c0c0;border:1px inset #808080;padding:6px;"><div>Память</div><div id="tm-mem-bar" style="height:20px;background:#000;margin-top:4px;border:1px inset #404040;"><div id="tm-mem-fill" style="height:100%;background:#0f0;width:45%;"></div></div></div></div><div style="font-weight:bold;padding:4px;background:#c0c0c0;border-top:1px solid #808080;">Запущенные приложения:</div><div class="tm-list" id="tm-list"></div><button class="btn-retro" onclick="tmEndTask()" style="margin-top:6px;">Снять задачу</button></div></div>
+
+<div class="window" id="win-snake" style="width:340px;height:400px;top:60px;left:250px;"><div class="title-bar" onmousedown="startDrag(event, 'win-snake')"><div class="title-bar-text">Змейка</div><div class="title-bar-controls"><button onclick="minimizeWindow('snake')">_</button><button onclick="closeWindow('snake')">×</button></div></div><div class="window-body" style="text-align:center;background:#c0c0c0;"><div style="margin-bottom:8px;font-weight:bold;">Счёт: <span id="snake-score">0</span> | Рекорд: <span id="snake-high">0</span></div><canvas id="snake-canvas" class="snake-canvas" width="300" height="300"></canvas><div style="margin-top:8px;font-size:11px;color:#808080;">Используйте стрелки для управления</div><button class="btn-retro" onclick="snakeStart()">Новая игра</button></div></div>
+
+<!-- TASKBAR -->
+<div id="taskbar">
+    <button id="start-btn" onclick="toggleStartMenu()"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="1" y="1" width="7" height="7" fill="#FF0000"/><rect x="10" y="1" width="7" height="7" fill="#00FF00"/><rect x="1" y="10" width="7" height="7" fill="#0000FF"/><rect x="10" y="10" width="7" height="7" fill="#FFFF00"/></svg> Пуск</button>
+    <div class="taskbar-divider"></div>
+    <div id="taskbar-items"></div>
+    <div class="taskbar-divider"></div>
+    <div id="system-tray"><span>🔊</span><span id="tray-clock">12:00</span></div>
+</div>
+
+<!-- START MENU -->
+<div id="start-menu">
+    <div class="start-menu-header">RetroOS 98</div>
+    <div class="start-menu-items">
+        <div class="start-menu-item" onclick="openWindow('my-computer'); toggleStartMenu();">💻 Мой компьютер</div>
+        <div class="start-menu-item" onclick="openWindow('explorer'); toggleStartMenu();">📁 Проводник</div>
+        <div class="start-menu-item" onclick="openWindow('notepad'); toggleStartMenu();">📝 Блокнот</div>
+        <div class="start-menu-item" onclick="openWindow('calculator'); toggleStartMenu();">🔢 Калькулятор</div>
+        <div class="start-menu-item" onclick="openWindow('paint'); toggleStartMenu();">🎨 Paint</div>
+        <div class="start-menu-item" onclick="openWindow('minesweeper'); toggleStartMenu();">💣 Сапёр</div>
+        <div class="start-menu-divider"></div>
+        <div class="start-menu-item" onclick="openWindow('cmd'); toggleStartMenu();">⬛ Командная строка</div>
+        <div class="start-menu-item" onclick="openWindow('mediaplayer'); toggleStartMenu();">🎵 Медиаплеер</div>
+        <div class="start-menu-item" onclick="openWindow('browser'); toggleStartMenu();">🌐 Internet Explorer</div>
+        <div class="start-menu-item" onclick="openWindow('taskmgr'); toggleStartMenu();">📊 Диспетчер задач</div>
+        <div class="start-menu-item" onclick="openWindow('snake'); toggleStartMenu();">🐍 Змейка</div>
+        <div class="start-menu-divider"></div>
+        <div class="start-menu-item" onclick="triggerBSOD()">⚡ Завершение работы</div>
+    </div>
+</div>
+
+<!-- CONTEXT MENU -->
+<div id="context-menu">
+    <div class="ctx-item" onclick="location.reload()">🔄 Обновить</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" onclick="openWindow('notepad')">📄 Создать документ</div>
+    <div class="ctx-item" onclick="openWindow('paint')">🖼️ Создать рисунок</div>
+    <div class="ctx-divider"></div>
+    <div class="ctx-item" onclick="openWindow('about')">ℹ️ О системе</div>
+</div>
+
+<script>
+    // ===== SYSTEM CORE =====
+    let focusedWin = null;
+    const windowStates = {};
+    const appLabels = {
+        'my-computer': 'Мой компьютер', 'explorer': 'Проводник', 'notepad': 'Блокнот',
+        'calculator': 'Калькулятор', 'paint': 'Paint', 'minesweeper': 'Сапёр', 'about': 'О системе',
+        'cmd': 'Командная строка', 'mediaplayer': 'Медиаплеер', 'browser': 'Internet Explorer',
+        'taskmgr': 'Диспетчер задач', 'snake': 'Змейка'
+    };
+
+    function openWindow(name) {
+        const win = document.getElementById('win-' + name);
+        if (!win) return;
+        win.classList.add('active');
+        if (!windowStates[name]) windowStates[name] = { minimized: false, maximized: false };
+        focusWindow(name);
+        updateTaskbar();
+    }
+
+    function closeWindow(name) {
+        const win = document.getElementById('win-' + name);
+        if (!win) return;
+        win.classList.remove('active', 'focused');
+        if (name === 'snake') clearInterval(snakeInterval);
+        if (name === 'taskmgr') clearInterval(tmInterval);
+        updateTaskbar();
+    }
+
+    function minimizeWindow(name) {
+        const win = document.getElementById('win-' + name);
+        if (!win) return;
+        win.classList.remove('active', 'focused');
+        if (windowStates[name]) windowStates[name].minimized = true;
+        updateTaskbar();
+    }
+
+    function maximizeWindow(name) {
+        const win = document.getElementById('win-' + name);
+        if (!win || !windowStates[name]) return;
+        const s = windowStates[name];
+        if (s.maximized) {
+            win.style.top = s.prevTop; win.style.left = s.prevLeft;
+            win.style.width = s.prevWidth; win.style.height = s.prevHeight;
+            s.maximized = false;
+        } else {
+            s.prevTop = win.style.top; s.prevLeft = win.style.left;
+            s.prevWidth = win.style.width; s.prevHeight = win.style.height;
+            win.style.top = '0'; win.style.left = '0';
+            win.style.width = '100%'; win.style.height = 'calc(100vh - 36px)';
+            s.maximized = true;
+        }
+        focusWindow(name);
+    }
+
+    function focusWindow(name) {
+        document.querySelectorAll('.window').forEach(w => w.classList.remove('focused'));
+        const win = document.getElementById('win-' + name);
+        if (win) { win.classList.add('active', 'focused'); focusedWin = name; }
+        updateTaskbar();
+    }
+
+    function updateTaskbar() {
+        const container = document.getElementById('taskbar-items');
+        container.innerHTML = '';
+        document.querySelectorAll('.window.active').forEach(win => {
+            const name = win.id.replace('win-', '');
+            if (!appLabels[name]) return;
+            const item = document.createElement('div');
+            item.className = 'taskbar-item' + (win.classList.contains('focused') ? ' active' : '');
+            item.textContent = appLabels[name];
+            item.onclick = () => win.classList.contains('focused') ? minimizeWindow(name) : focusWindow(name);
+            container.appendChild(item);
+        });
+    }
+
+    // Drag & Resize
+    let dragTarget = null, dragOff = {x:0,y:0}, resizeTarget = null;
+    document.addEventListener('mousedown', e => {
+        const tb = e.target.closest('.title-bar');
+        const rh = e.target.closest('.resize-handle');
+        if (tb && tb.parentElement) {
+            dragTarget = tb.parentElement;
+            const name = dragTarget.id.replace('win-', '');
+            focusWindow(name);
+            if (windowStates[name] && windowStates[name].maximized) return;
+            dragOff = { x: e.clientX - dragTarget.offsetLeft, y: e.clientY - dragTarget.offsetTop };
+        } else if (rh && rh.parentElement) {
+            resizeTarget = rh.parentElement;
+            e.stopPropagation();
+        }
+    });
+    document.addEventListener('mousemove', e => {
+        if (dragTarget) { dragTarget.style.left = (e.clientX - dragOff.x) + 'px'; dragTarget.style.top = (e.clientY - dragOff.y) + 'px'; }
+        if (resizeTarget) {
+            const w = e.clientX - resizeTarget.offsetLeft;
+            const h = e.clientY - resizeTarget.offsetTop;
+            if (w > 200) resizeTarget.style.width = w + 'px';
+            if (h > 150) resizeTarget.style.height = h + 'px';
+        }
+    });
+    document.addEventListener('mouseup', () => { dragTarget = null; resizeTarget = null; });
+
+    // Start Menu & Context
+    function toggleStartMenu() {
+        document.getElementById('start-menu').classList.toggle('show');
+        document.getElementById('start-btn').classList.toggle('active');
+    }
+    document.addEventListener('click', e => {
+        if (!e.target.closest('#start-menu') && !e.target.closest('#start-btn')) {
+            document.getElementById('start-menu').classList.remove('show');
+            document.getElementById('start-btn').classList.remove('active');
+        }
+        document.getElementById('context-menu').style.display = 'none';
+    });
+    document.getElementById('desktop').addEventListener('contextmenu', e => {
+        e.preventDefault();
+        const ctx = document.getElementById('context-menu');
+        ctx.style.display = 'block';
+        ctx.style.left = e.clientX + 'px';
+        ctx.style.top = e.clientY + 'px';
+    });
+
+    document.querySelectorAll('.desktop-icon').forEach(icon => icon.addEventListener('click', function() {
+        document.querySelectorAll('.desktop-icon').forEach(i => i.classList.remove('selected'));
+        this.classList.add('selected');
+    }));
+
+    // ===== CMD =====
+    function handleCmd(e) {
+        if (e.key !== 'Enter') return;
+        const input = document.getElementById('cmd-input');
+        const val = input.value.trim().toLowerCase();
+        input.value = '';
+        const out = document.getElementById('cmd-output');
+        const append = txt => { const d = document.createElement('div'); d.className='cmd-line'; d.textContent=txt; out.appendChild(d); };
+        append('C:\\> ' + (input.previousSibling?.textContent || '') + val);
+        if (!val) { append('C:\\>'); return out.scrollTop = out.scrollHeight; }
+        if (val === 'help') append('Доступные команды: help, dir, cls, echo, ver, time, date, exit');
+        else if (val === 'ver') append('Microsoft Windows 98 [Version 4.10.1998]');
+        else if (val === 'cls') { out.innerHTML = ''; }
+        else if (val === 'dir') append(' Volume in drive C is RETRO_OS\n Directory of C:\\\n\n readme.txt\n setup.exe\n WINDOWS <DIR>\n 3 File(s) 1,245,678 bytes');
+        else if (val.startsWith('echo ')) append(val.slice(5));
+        else if (val === 'time') append('Текущее время: ' + new Date().toLocaleTimeString());
+        else if (val === 'date') append('Текущая дата: ' + new Date().toLocaleDateString());
+        else if (val === 'exit') closeWindow('cmd');
+        else append('Неизвестная команда: ' + val);
+        append('C:\\>');
+        out.scrollTop = out.scrollHeight;
+    }
+
+    // ===== MEDIA PLAYER =====
+    let mpPlaying = false, mpProgress = 0, mpInterval = null;
+    const tracks = ['01. RetroWave.mp3', '02. 8bit_Dreams.mid', '03. Dialup_Connection.wav', '04. CRT_Hum.ogg'];
+    let currentTrack = 0;
+    function mpUpdateUI() {
+        document.getElementById('mp-display').textContent = `00:${String(Math.floor(mpProgress)).padStart(2,'0')} / 03:45`;
+        document.getElementById('mp-bar').style.width = (mpProgress / 225 * 100) + '%';
+        document.querySelectorAll('.mp-track').forEach((t,i) => t.classList.toggle('active', i===currentTrack));
+    }
+    function mpPlay() { if(!mpPlaying){ mpPlaying=true; mpInterval=setInterval(()=>{mpProgress++;if(mpProgress>225){mpStop();}mpUpdateUI();},1000); } }
+    function mpPause() { if(mpPlaying){ mpPlaying=false; clearInterval(mpInterval); } }
+    function mpStop() { mpPlaying=false; clearInterval(mpInterval); mpProgress=0; mpUpdateUI(); }
+    function mpLoad(i) { currentTrack=i; mpStop(); mpProgress=0; mpUpdateUI(); }
+    document.querySelectorAll('.mp-track').forEach((t,i)=>t.onclick=()=>mpLoad(i));
+
+    // ===== BROWSER =====
+    const iePages = {
+        'news': '<h1>📰 Новости дня</h1><p>Учёные обнаружили новый вид динозавров в Сибири. Цена на видеокарты упала до $150. Microsoft анонсирует новую ОС.</p>',
+        'email': '<h1>📧 Входящие (2)</h1><ul style="list-style:none;padding:0;"><li>📩 Привет! Как дела?</li><li>📩 Ваш заказ доставлен</li></ul>',
+        'chat': '<h1>💬 RetroChat</h1><div style="border:1px inset #808080;padding:4px;height:100px;overflow-y:auto;background:#fff;margin-bottom:4px;"><b>Guest:</b> Кто в сети?<br><b>Admin:</b> Все дома.<br><b>Guest:</b> Привет!</div><input type="text" placeholder="Сообщение..." style="border:1px inset #808080;padding:2px;width:200px;"> <button class="btn-retro">Отправить</button>',
+        'games': '<h1>🎮 Игровой портал</h1><p>Лучшие игры 1998: Quake II, StarCraft, Half-Life, Diablo II. Скачать демо-версии можно ниже.</p>'
+    };
+    function ieLoad(page) {
+        const addr = document.getElementById('ie-address');
+        addr.textContent = `http://www.retro${page}.net`;
+        document.getElementById('ie-content').innerHTML = iePages[page] || '<h1>404 Not Found</h1>';
+    }
+    function ieNavigate() { ieLoad('search'); }
+    function ieBack() { ieLoad('news'); }
+    function ieRefresh() { document.getElementById('ie-content').innerHTML = iePages.news; }
+
+    // ===== TASK MANAGER =====
+    let tmSelected = null;
+    function tmUpdate() {
+        const list = document.getElementById('tm-list');
+        list.innerHTML = '';
+        const open = document.querySelectorAll('.window.active');
+        open.forEach(w => {
+            const n = w.id.replace('win-', '');
+            if(!appLabels[n]) return;
+            const d = document.createElement('div');
+            d.className = 'tm-row' + (tmSelected===n?' selected':'');
+            d.innerHTML = `<span>${appLabels[n]}</span><span style="color:#808080;">Работает</span>`;
+            d.onclick = () => { tmSelected = n; tmUpdate(); };
+            list.appendChild(d);
+        });
+        document.getElementById('tm-cpu-fill').style.width = (10 + Math.random()*40) + '%';
+        document.getElementById('tm-mem-fill').style.width = (30 + Math.random()*30) + '%';
+    }
+    function tmEndTask() {
+        if(tmSelected) { closeWindow(tmSelected); tmSelected=null; tmUpdate(); }
+    }
+    const tmInterval = setInterval(tmUpdate, 1500);
+
+    // ===== SNAKE GAME =====
+    const snakeCanvas = document.getElementById('snake-canvas');
+    const sCtx = snakeCanvas.getContext('2d');
+    const grid = 15;
+    let snake = [], food = {}, dir = {x:0,y:0}, snakeScore = 0, snakeHigh = 0, snakeInterval = null, snakeRunning = false;
+    function snakeDraw() {
+        sCtx.fillStyle = '#111'; sCtx.fillRect(0,0,300,300);
+        sCtx.fillStyle = '#0f0';
+        snake.forEach(s => sCtx.fillRect(s.x*grid, s.y*grid, grid-1, grid-1));
+        sCtx.fillStyle = '#f00';
+        sCtx.fillRect(food.x*grid, food.y*grid, grid-1, grid-1);
+    }
+    function snakeStep() {
+        const head = {x: snake[0].x + dir.x, y: snake[0].y + dir.y};
+        if(head.x<0||head.x>=20||head.y<0||head.y>=20||snake.some(s=>s.x===head.x&&s.y===head.y)) return snakeGameOver();
+        snake.unshift(head);
+        if(head.x===food.x && head.y===food.y) {
+            snakeScore++; document.getElementById('snake-score').textContent = snakeScore;
+            food = {x: Math.floor(Math.random()*20), y: Math.floor(Math.random()*20)};
+        } else snake.pop();
+        snakeDraw();
+    }
+    function snakeGameOver() {
+        clearInterval(snakeInterval); snakeRunning = false;
+        if(snakeScore > snakeHigh) { snakeHigh = snakeScore; document.getElementById('snake-high').textContent = snakeHigh; }
+        sCtx.fillStyle = 'rgba(0,0,0,0.7)'; sCtx.fillRect(0,0,300,300);
+        sCtx.fillStyle = '#fff'; sCtx.font = '24px sans-serif'; sCtx.textAlign = 'center';
+        sCtx.fillText('GAME OVER', 150, 140);
+    }
+    function snakeStart() {
+        clearInterval(snakeInterval);
+        snake = [{x:10,y:10},{x:9,y:10},{x:8,y:10}]; dir={x:1,y:0}; snakeScore=0;
+        document.getElementById('snake-score').textContent = '0';
+        food = {x:15,y:15}; snakeRunning = true;
+        snakeInterval = setInterval(snakeStep, 100); snakeDraw();
+    }
+    document.addEventListener('keydown', e => {
+        if(focusedWin !== 'snake' || !snakeRunning) return;
+        if(e.key==='ArrowUp' && dir.y!==1) dir={x:0,y:-1};
+        else if(e.key==='ArrowDown' && dir.y!==-1) dir={x:0,y:1};
+        else if(e.key==='ArrowLeft' && dir.x!==1) dir={x:-1,y:0};
+        else if(e.key==='ArrowRight' && dir.x!==-1) dir={x:1,y:0};
+        e.preventDefault();
+    });
+
+    // ===== PAINT INIT =====
+    let paintCtx, paintColor='#000000', painting=false;
+    function initPaint() {
+        const canvas = document.getElementById('paint-canvas');
+        if(!canvas) return;
+        paintCtx = canvas.getContext('2d');
+        paintCtx.fillStyle = '#fff'; paintCtx.fillRect(0,0,canvas.width,canvas.height);
+        const colors = ['#000','#808080','#800000','#808000','#008000','#008080','#000080','#800080','#fff','#c0c0c0','#f00','#ff0','#0f0','#0ff','#00f','#f0f'];
+        const cont = document.getElementById('paint-colors');
+        colors.forEach(c => {
+            const d = document.createElement('div');
+            d.style.cssText = `width:16px;height:16px;background:${c};border:1px solid #808080;cursor:pointer;${c===paintColor?'outline:2px solid #000;outline-offset:2px;':''}`;
+            d.onclick = () => { paintColor=c; cont.querySelectorAll('div').forEach(x=>x.style.outline=''); d.style.outline='2px solid #000'; d.style.outlineOffset='2px'; };
+            cont.appendChild(d);
+        });
+        canvas.onmousedown = e => { painting=true; drawPaint(e); };
+        canvas.onmousemove = e => { if(painting) drawPaint(e); };
+        canvas.onmouseup = canvas.onmouseleave = () => painting=false;
+    }
+    function drawPaint(e) {
+        const r = e.target.getBoundingClientRect();
+        paintCtx.fillStyle = paintColor;
+        paintCtx.beginPath(); paintCtx.arc(e.clientX-r.left, e.clientY-r.top, 2, 0, Math.PI*2); paintCtx.fill();
+    }
+
+    // ===== MINESWEEPER (compact) =====
+    let mBoard=[], mRev=[], mFlag=[], mOver=false, mTimer=0, mFirst=true, mTI=null;
+    function initMinesweeper() {
+        mBoard=[];mRev=[];mFlag=[];mOver=false;mFirst=true;mTimer=0;mTI&&clearInterval(mTI);
+        document.getElementById('mine-timer').textContent='000';
+        document.getElementById('mine-count').textContent='010';
+        document.getElementById('mine-face').textContent='😊';
+        for(let r=0;r<9;r++){mBoard[r]=[];mRev[r]=[];mFlag[r]=[];for(let c=0;c<9;c++){mBoard[r][c]=0;mRev[r][c]=false;mFlag[r][c]=false;}}
+        renderMine();
+    }
+    function placeMines(sr,sc){
+        let p=0; while(p<10){let r=Math.floor(Math.random()*9),c=Math.floor(Math.random()*9);if(mBoard[r][c]===-1||(Math.abs(r-sr)<2&&Math.abs(c-sc)<2))continue;mBoard[r][c]=-1;p++;}
+        for(let r=0;r<9;r++)for(let c=0;c<9;c++){if(mBoard[r][c]===-1)continue;let cnt=0;for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){let nr=r+dr,nc=c+dc;if(nr>=0&&nr<9&&nc>=0&&nc<9&&mBoard[nr][nc]===-1)cnt++;}mBoard[r][c]=cnt;}
+    }
+    function renderMine(){
+        const g=document.getElementById('mine-grid');g.innerHTML='';g.style.gridTemplateColumns='repeat(9,22px)';
+        for(let r=0;r<9;r++)for(let c=0;c<9;c++){
+            const d=document.createElement('div');d.className='mine-cell';d.style.cssText='width:22px;height:22px;background:#c0c0c0;border:2px outset #fff;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:12px;cursor:pointer;';
+            d.onclick=()=>mineClick(r,c);d.oncontextmenu=e=>{e.preventDefault();mineRight(r,c);};
+            if(mRev[r][c]){d.style.border='1px solid #808080';d.style.background='#c0c0c0';if(mBoard[r][c]===-1){d.textContent='💣';d.style.background='#f00';}else if(mBoard[r][c]>0){d.textContent=mBoard[r][c];d.style.color=['','#0000ff','#008000','#ff0000','#000080','#800000','#008080','#000','#808080'][mBoard[r][c]];}}
+            else if(mFlag[r][c])d.textContent='🚩';
+            g.appendChild(d);
+        }
+    }
+    function mineClick(r,c){
+        if(mOver||mFlag[r][c]||mRev[r][c])return;
+        if(mFirst){mFirst=false;placeMines(r,c);mTI=setInterval(()=>{mTimer++;document.getElementById('mine-timer').textContent=String(mTimer).padStart(3,'0');},1000);}
+        if(mBoard[r][c]===-1){mOver=true;clearInterval(mTI);document.getElementById('mine-face').textContent='😵';revealAll();mRev[r][c]=true;renderMine();setTimeout(()=>alert('💥 Бум!'),50);return;}
+        reveal(r,c);renderMine();
+        let u=0;for(let i=0;i<9;i++)for(let j=0;j<9;j++)if(!mRev[i][j]&&mBoard[i][j]!==-1)u++;
+        if(u===0){mOver=true;clearInterval(mTI);document.getElementById('mine-face').textContent='😎';setTimeout(()=>alert('🎉 Победа!'),50);}
+    }
+    function mineRight(r,c){if(mOver||mRev[r][c])return;mFlag[r][c]=!mFlag[r][c];document.getElementById('mine-count').textContent=String(10-mFlag.flat().filter(Boolean).length).padStart(3,'0');renderMine();}
+    function reveal(r,c){if(r<0||r>=9||c<0||c>=9||mRev[r][c]||mFlag[r][c]||mBoard[r][c]===-1)return;mRev[r][c]=true;if(mBoard[r][c]===0)for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++)reveal(r+dr,c+dc);}
+    function revealAll(){for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(mBoard[r][c]===-1)mRev[r][c]=true;}
+
+    // ===== CALCULATOR =====
+    let cExpr='',cVal='0',cNew=true;
+    function calcInput(v){if('0123456789.'.includes(v)){if(cNew){cVal=v==='.'?'0.':v;cNew=false;}else{if(v==='.'&&cVal.includes('.'))return;cVal+=v;}}else{cExpr+=cVal+' '+v+' ';cNew=true;}document.getElementById('calc-display').textContent=cVal;}
+    function calcEquals(){try{let res=Function('"use strict";return('+cExpr+cVal+')')();cVal=String(parseFloat(res.toFixed(8)));cExpr='';cNew=true;}catch(e){cVal='Ошибка';cExpr='';cNew=true;}document.getElementById('calc-display').textContent=cVal;}
+    function calcClear(){cExpr='';cVal='0';cNew=true;document.getElementById('calc-display').textContent='0';}
+    function calcBackspace(){if(cVal.length>1)cVal=cVal.slice(0,-1);else{cVal='0';cNew=true;}document.getElementById('calc-display').textContent=cVal;}
+
+    // ===== BOOT & CLOCK =====
+    const bootLines=['RetroOS 98 BIOS v3.21','Copyright (C) 1998 RetroSoft Corp.',' ','Процессор: Pentium II 300MHz','Проверка памяти: 65536K OK','Загрузка RetroOS 98...'];
+    let bIdx=0;
+    function boot(){
+        if(bIdx<bootLines.length){document.getElementById('boot-text').innerHTML+=bootLines[bIdx]+'<br>';document.getElementById('boot-progress').style.width=((bIdx+1)/bootLines.length*100)+'%';bIdx++;setTimeout(boot,300+Math.random()*200);}
+        else setTimeout(()=>{document.getElementById('boot-screen').classList.add('hidden');initPaint();initMinesweeper();tmUpdate();},600);
+    }
+    setTimeout(boot,500);
+    setInterval(()=>{const d=new Date();document.getElementById('tray-clock').textContent=d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');},1000);
+    function triggerBSOD(){toggleStartMenu();document.getElementById('bsod').style.display='flex';const ex=()=>{document.getElementById('bsod').style.display='none';location.reload();};document.addEventListener('keydown',ex,{once:true});document.addEventListener('click',ex,{once:true});}
+
+    // Init
+    window.onload = () => { initPaint(); initMinesweeper(); };
+</script>
+</body>
+</html>
